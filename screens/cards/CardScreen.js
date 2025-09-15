@@ -1,30 +1,40 @@
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions, Animated, Image, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as Brightness from 'expo-brightness';
 import * as Clipboard from 'expo-clipboard';
 import { getOptimalTextColor } from '../../utils/colorUtils';
-import Svg, { Path, Rect } from 'react-native-svg';
-import JsBarcode from 'jsbarcode';
-import QRCode from 'qrcode';
+import { useBarcodeGenerator } from '../../hooks/useBarcodeGenerator';
+import { ChevronLeft, Trash2, Copy } from 'lucide-react-native';
+
+const lightTheme = {
+  colors: {
+    background: '#FFFFFF',
+    surface: '#F8F9FA',
+    primary: '#007AFF',
+    text: '#000000',
+    textSecondary: '#6B7280',
+    border: '#E5E7EB'
+  }
+};
 
 const BARCODE_TYPES = [
-  { id: 'QR', label: 'QR Code', format: 'qr' },
-  { id: 'CODE128', label: 'Code 128', format: 'code128' },
-  { id: 'CODE39', label: 'Code 39', format: 'code39' },
-  { id: 'EAN13', label: 'EAN-13', format: 'ean13' },
-  { id: 'EAN8', label: 'EAN-8', format: 'ean8' },
-  { id: 'ITF', label: 'ITF', format: 'itf' },
+  { id: 'BARCODE', label: 'Barcode', format: 'barcode' },
+  { id: 'QR', label: 'QR', format: 'qr' },
+  { id: 'PDF417', label: 'PDF417', format: 'pdf417' },
+  { id: 'AZTEC', label: 'Aztec', format: 'aztec' },
 ];
 
 export default function CardScreen({ route, navigation }) {
-  const { theme } = useTheme();
   const { card } = route.params;
-  const [activeTab, setActiveTab] = useState('QR');
-  const [barcodeData, setBarcodeData] = useState(null);
+  const { theme } = useTheme();
+  const { generateBarcode, loading: barcodeLoading } = useBarcodeGenerator();
+  const [activeTab, setActiveTab] = useState('BARCODE');
+  const [generatedBarcode, setGeneratedBarcode] = useState(null);
   const [originalBrightness, setOriginalBrightness] = useState(null);
-  const [screenData] = useState(Dimensions.get('window'));
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     // Set screen to full brightness when component mounts
     const setBrightness = async () => {
@@ -47,88 +57,50 @@ export default function CardScreen({ route, navigation }) {
     };
   }, [originalBrightness]);
 
-  const generateBarcode = async (format, value) => {
+  const generateBarcodeImage = async () => {
+    if (!card.number) return;
+
     try {
-      if (format === 'qr') {
-        // Generate QR Code using qrcode library
-        const qrString = await QRCode.toString(value, {
-          type: 'svg',
-          width: 200,
-          margin: 2,
-          color: {
-            dark: '#000000',
-            light: '#FFFFFF'
-          }
-        });
-        setBarcodeData({ type: 'qr', data: qrString });
-      } else {
-        // Generate other barcodes using jsbarcode
-        const canvas = {
-          width: 0,
-          height: 0,
-          rects: []
-        };
+      const activeType = BARCODE_TYPES.find(type => type.id === activeTab);
 
-        // Mock canvas for jsbarcode with all required methods
-        const mockCanvas = {
-          getContext: () => ({
-            fillRect: (x, y, width, height) => {
-              canvas.rects.push({ x, y, width, height });
-              canvas.width = Math.max(canvas.width, x + width);
-              canvas.height = Math.max(canvas.height, y + height);
-            },
-            fillText: () => {},
-            measureText: () => ({ width: 0 }),
-            translate: () => {},
-            scale: () => {},
-            save: () => {},
-            restore: () => {},
-            strokeRect: () => {},
-            beginPath: () => {},
-            moveTo: () => {},
-            lineTo: () => {},
-            stroke: () => {},
-            fill: () => {},
-            arc: () => {},
-            rect: () => {},
-            closePath: () => {}
-          })
-        };
+      if (activeType) {
+        // Higher quality settings for 2D codes (QR, PDF417, Aztec)
+        const is2DCode = ['qr', 'pdf417', 'aztec'].includes(activeType.format);
 
-        const formatMap = {
-          'code128': 'CODE128',
-          'code39': 'CODE39',
-          'ean13': 'EAN13',
-          'ean8': 'EAN8',
-          'itf': 'ITF'
-        };
-
-        JsBarcode(mockCanvas, value, {
-          format: formatMap[format] || 'CODE128',
-          width: 2,
-          height: 80,
-          displayValue: false
+        const barcodeImage = await generateBarcode(card.number, {
+          type: activeType.format,
+          scale: is2DCode ? 4 : 2, // Higher scale for 2D codes
+          includetext: activeType.format === 'barcode', // Only include text for 1D barcode
         });
 
-        setBarcodeData({
-          type: 'rects',
-          data: canvas.rects,
-          width: Math.max(canvas.width, 200),
-          height: Math.max(canvas.height, 80)
-        });
+        // Check if it's a string or if we need to extract a property
+        const imageUri = typeof barcodeImage === 'string' ? barcodeImage : barcodeImage?.uri || barcodeImage?.data || barcodeImage;
+
+        setGeneratedBarcode(imageUri);
       }
     } catch (error) {
-      console.error('Error generating barcode:', error);
-      setBarcodeData(null);
+      setGeneratedBarcode(null);
+    }
+  };
+
+  const handleTabSelect = (type, index) => {
+    setActiveTab(type);
+
+    // Animate tab indicator
+    Animated.timing(tabIndicatorAnim, {
+      toValue: index,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+
+    if (card.number) {
+      generateBarcodeImage();
     }
   };
 
   useEffect(() => {
     if (card.number && activeTab) {
-      const activeType = BARCODE_TYPES.find(type => type.id === activeTab);
-      if (activeType) {
-        generateBarcode(activeType.format, card.number);
-      }
+      generateBarcodeImage();
     }
   }, [activeTab, card.number]);
 
@@ -141,87 +113,87 @@ export default function CardScreen({ route, navigation }) {
     }
   };
 
+  const handleDeleteCard = () => {
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteCard = () => {
+    // TODO: Implement database deletion
+    console.log('Deleting card:', card.id);
+    setShowDeleteModal(false);
+    navigation.goBack();
+  };
+
   const renderBarcode = () => {
-    if (!barcodeData) {
-      return (
-        <View style={styles.barcodeContainer}>
-          <Text style={styles.loadingText}>Generating barcode...</Text>
-        </View>
-      );
-    }
+    // Dynamic sizing based on barcode type
+    const screenWidth = Dimensions.get('window').width;
+    const is1DBarcode = activeTab === 'BARCODE';
 
-    if (barcodeData.type === 'qr') {
-      // For QR codes, show a placeholder since SVG parsing is complex
-      return (
-        <View style={styles.barcodeContainer}>
-          <View style={styles.qrPlaceholder}>
-            <Text style={styles.qrText}>QR Code</Text>
-            <Text style={styles.qrSubtext}>Generated for: {card.number}</Text>
-          </View>
-        </View>
-      );
-    } else if (barcodeData.type === 'rects') {
-      // Render barcode from rectangles
-      return (
-        <View style={styles.barcodeContainer}>
-          <Svg width={barcodeData.width} height={barcodeData.height} style={styles.svg}>
-            {barcodeData.data.map((rect, index) => (
-              <Rect
-                key={index}
-                x={rect.x}
-                y={rect.y}
-                width={rect.width}
-                height={rect.height}
-                fill="black"
-              />
-            ))}
-          </Svg>
-        </View>
-      );
-    }
+    const imageStyle = {
+      ...styles.barcodeImage,
+      width: screenWidth * 0.85,
+      height: is1DBarcode ? 120 : screenWidth * 0.85, // 1D codes are shorter
+    };
 
-    return null;
+    return (
+      <View style={styles.barcodeContainer}>
+        {barcodeLoading ? (
+          <Text style={[styles.loadingText, { color: lightTheme.colors.textSecondary }]}>
+            Generating barcode...
+          </Text>
+        ) : generatedBarcode ? (
+          <Image
+            source={{ uri: generatedBarcode }}
+            style={imageStyle}
+            resizeMode="contain"
+          />
+        ) : (
+          <Text style={[styles.errorText, { color: lightTheme.colors.textSecondary }]}>
+            Failed to generate barcode
+          </Text>
+        )}
+      </View>
+    );
   };
 
   const cardBackgroundColor = card.bg_colour || theme.colors.surface;
   const cardTextColor = getOptimalTextColor(cardBackgroundColor);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: lightTheme.colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={[styles.backButton, { color: theme.colors.primary }]}>← Back</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <ChevronLeft size={39} color={lightTheme.colors.text} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleDeleteCard} style={styles.headerButton}>
+          <Trash2 size={24} color="#FF3B30" />
         </TouchableOpacity>
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabContainer}>
-        {BARCODE_TYPES.map((type) => (
-          <TouchableOpacity
-            key={type.id}
-            style={[
-              styles.tab,
-              {
-                backgroundColor: activeTab === type.id ? theme.colors.primary : 'transparent',
-                borderColor: theme.colors.primary,
-              }
-            ]}
-            onPress={() => setActiveTab(type.id)}
-          >
-            <Text
+      <View style={styles.tabSection}>
+        <View style={styles.tabContainer}>
+          {BARCODE_TYPES.map((type, index) => (
+            <TouchableOpacity
+              key={type.id}
               style={[
-                styles.tabText,
-                {
-                  color: activeTab === type.id ? '#FFFFFF' : theme.colors.primary,
-                  fontWeight: activeTab === type.id ? '600' : '400',
-                }
+                styles.tab,
+                activeTab === type.id && styles.selectedTab
               ]}
+              onPress={() => handleTabSelect(type.id, index)}
             >
-              {type.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === type.id && styles.selectedTabText
+                ]}
+              >
+                {type.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Barcode Display */}
@@ -230,19 +202,55 @@ export default function CardScreen({ route, navigation }) {
       </View>
 
       {/* Card Info */}
-      <View style={[styles.cardInfo, { backgroundColor: cardBackgroundColor }]}>
-        <Text style={[styles.cardName, { color: cardTextColor }]}>
-          {card.name}
-        </Text>
-        <TouchableOpacity onPress={copyToClipboard} style={styles.numberContainer}>
-          <Text style={[styles.cardNumber, { color: cardTextColor }]}>
-            {card.number}
-          </Text>
-          <Text style={[styles.copyHint, { color: cardTextColor, opacity: 0.7 }]}>
-            Tap to copy
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.cardWrapper}>
+        <View style={[styles.cardInfo, { backgroundColor: cardBackgroundColor }]}>
+          <View style={styles.cardHeader}>
+            <Text style={[styles.cardName, { color: cardTextColor }]}>
+              {card.name}
+            </Text>
+            <TouchableOpacity onPress={copyToClipboard} style={[styles.copyButton, { borderColor: cardTextColor }]}>
+              <Copy size={10} color={cardTextColor} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.numberSection}>
+            <Text style={[styles.cardNumber, { color: cardTextColor, fontSize: card.number.length > 16 ? 16 : card.number.length > 12 ? 18 : 20 }]}>
+              {card.number}
+            </Text>
+          </View>
+        </View>
       </View>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Delete Card</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to delete "{card.name}"? This action cannot be undone.
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowDeleteModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.deleteButton]}
+                onPress={confirmDeleteCard}
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -252,108 +260,203 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 10,
     paddingBottom: 16,
   },
-  backButton: {
-    fontSize: 16,
-    fontWeight: '500',
+  headerButton: {
+    padding: 4,
+  },
+  tabSection: {
+    paddingHorizontal: 20,
+    marginBottom: 8,
   },
   tabContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 25,
+    padding: 4,
   },
   tab: {
     flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginHorizontal: 4,
+    paddingHorizontal: 12,
+    borderRadius: 20,
     alignItems: 'center',
   },
+  selectedTab: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   tabText: {
-    fontSize: 14,
-    textAlign: 'center',
+    fontSize: 11,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  selectedTabText: {
+    color: '#000000',
+    fontWeight: '600',
   },
   barcodeSection: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 140, // Space for the fixed card at bottom
   },
   barcodeContainer: {
     backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 16,
     alignItems: 'center',
+    width: '100%',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
   svg: {
     backgroundColor: '#fff',
     borderRadius: 4,
   },
+  barcodeImage: {
+    width: Dimensions.get('window').width * 0.8,
+    height: Dimensions.get('window').width * 0.8, // Square for QR, will be overridden for 1D codes
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+  },
   loadingText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    fontStyle: 'italic',
     textAlign: 'center',
     padding: 20,
   },
-  qrPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 200,
-    height: 200,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    borderStyle: 'dashed',
-  },
-  qrText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
-  qrSubtext: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  cardInfo: {
-    margin: 20,
-    padding: 24,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  cardName: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  numberContainer: {
-    alignItems: 'center',
-  },
-  cardNumber: {
-    fontSize: 20,
-    fontFamily: 'monospace',
-    fontWeight: '600',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  copyHint: {
+  errorText: {
     fontSize: 14,
     fontStyle: 'italic',
+    textAlign: 'center',
+    padding: 20,
+  },
+  cardWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  cardInfo: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  cardName: {
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    flex: 1,
+  },
+  numberSection: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    width: '100%',
+  },
+  cardNumber: {
+    fontFamily: 'monospace',
+    fontWeight: '500',
+    letterSpacing: 1,
+    textAlign: 'center',
+    width: '100%',
+  },
+  copyButton: {
+    padding: 6,
+    borderRadius: 3,
+    borderWidth: 0.5,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginLeft: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    marginHorizontal: 40,
+    maxWidth: 300,
+    width: '100%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F5F5F5',
+  },
+  deleteButton: {
+    backgroundColor: '#FF3B30',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  deleteButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#FFFFFF',
   },
 });

@@ -771,6 +771,13 @@
     "@babel/helper-string-parser" "^7.27.1"
     "@babel/helper-validator-identifier" "^7.27.1"
 
+"@bwip-js/react-native@^4.7.0":
+  version "4.7.0"
+  resolved "https://registry.yarnpkg.com/@bwip-js/react-native/-/react-native-4.7.0.tgz#d866b5513666c2bf83c8d7f694fb46a9e2dd1a75"
+  integrity sha512-aFbiWRcx7t5nPcSMNQeWfpgXBkEVrjRU314GXWBLG6BNKQc+mxW6GbVyt/OfjY4hsKmwr1Y2az9xxTlKxkrNiQ==
+  dependencies:
+    react-zlib-js "^1.0.5"
+
 "@egjs/hammerjs@^2.0.17":
   version "2.0.17"
   resolved "https://registry.yarnpkg.com/@egjs/hammerjs/-/hammerjs-2.0.17.tgz#5dc02af75a6a06e4c2db0202cae38c9263895124"
@@ -4146,6 +4153,11 @@ react-refresh@^0.14.0, react-refresh@^0.14.2:
   version "0.14.2"
   resolved "https://registry.yarnpkg.com/react-refresh/-/react-refresh-0.14.2.tgz#3833da01ce32da470f1f936b9d477da5c7028bf9"
   integrity sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==
+
+react-zlib-js@^1.0.5:
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/react-zlib-js/-/react-zlib-js-1.0.5.tgz#7bb433e1a4ae53a8e6f361b3d36166baf5bbc60f"
+  integrity sha512-TLcPdmqhIl+ylwOwlfm1WUuI7NVvhAv3L74d1AabhjyaAbmLOROTA/Q4EQ/UMCFCOjIkVim9fT3UZOQSFk/mlA==
 
 react@19.1.0:
   version "19.1.0"

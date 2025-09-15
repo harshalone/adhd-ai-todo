@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { CreditCard, ShoppingBag, Tag, Settings } from 'lucide-react-native';
 
 import CardsStackNavigator from './CardsStackNavigator';
-import ShoppingScreen from '../screens/ShoppingScreen';
+import ShoppingStackNavigator from './ShoppingStackNavigator';
 import DealsScreen from '../screens/DealsScreen';
 import SettingsStackNavigator from './SettingsStackNavigator';
 import { useTheme } from '../context/ThemeContext';
@@ -45,7 +45,7 @@ export default function TabNavigator() {
       })}
     >
       <Tab.Screen name="Cards" component={CardsStackNavigator} />
-      <Tab.Screen name="Shopping" component={ShoppingScreen} />
+      <Tab.Screen name="Shopping" component={ShoppingStackNavigator} />
       <Tab.Screen name="Deals" component={DealsScreen} />
       <Tab.Screen name="Settings" component={SettingsStackNavigator} />
     </Tab.Navigator>
