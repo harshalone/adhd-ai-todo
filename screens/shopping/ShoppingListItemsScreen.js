@@ -9,12 +9,14 @@ import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../utils/supabase';
 import useAuthStore from '../../stores/authStore';
 import useSearchStore from '../../stores/searchStore';
+import useShoppingStore from '../../stores/shoppingStore';
 
 export default function ShoppingListItemsScreen({ route, navigation }) {
   const { listId, listName } = route.params;
   const { theme } = useTheme();
   const { user } = useAuthStore();
   const { addSearchTerm, removeSearchTerm, getRecentSearches, clearSearchHistory } = useSearchStore();
+  const { getSortOption, setSortOption, setLastOpenedList } = useShoppingStore();
   const [shoppingItems, setShoppingItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -23,7 +25,7 @@ export default function ShoppingListItemsScreen({ route, navigation }) {
   const [newItemName, setNewItemName] = useState('');
   const [addingItem, setAddingItem] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
-  const [sortOption, setSortOption] = useState('default');
+  const [sortOption, setLocalSortOption] = useState(getSortOption());
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [tempSearchQuery, setTempSearchQuery] = useState('');
   const [tempSortOptions, setTempSortOptions] = useState({ primary: 'default', secondary: 'none' });
@@ -32,26 +34,27 @@ export default function ShoppingListItemsScreen({ route, navigation }) {
   const [copyNotification, setCopyNotification] = useState(false);
   const [sortedItems, setSortedItems] = useState([]);
   const [shouldResort, setShouldResort] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   const fetchShoppingItems = useCallback(async () => {
     if (!user) return;
 
     try {
-      // First, get the list UUID from users_shopping_lists table
+      // First, get the list UUID and ownership info from users_shopping_lists table
       const { data: listData, error: listError } = await supabase
         .from('users_shopping_lists')
-        .select('list_uid')
+        .select('list_uid, user_uid')
         .eq('id', listId)
-        .eq('user_uid', user.id)
         .single();
 
       if (listError) {
-        console.error('Error fetching list UUID:', listError);
+        console.error('Error fetching list data:', listError);
         return;
       }
 
-      // Store the list UUID for sharing
+      // Store the list UUID for sharing and check ownership
       setListUuid(listData.list_uid);
+      setIsOwner(listData.user_uid === user.id);
 
       // Then fetch shopping items using the UUID
       const { data, error } = await supabase
@@ -260,10 +263,12 @@ export default function ShoppingListItemsScreen({ route, navigation }) {
       combinedOption = `${primary}+${secondary}`;
     }
 
-    setSortOption(combinedOption);
+    console.log('ShoppingListItems: Applying sort option:', combinedOption);
+    setLocalSortOption(combinedOption);
+    setSortOption(combinedOption); // Persist to store
     setShouldResort(true);
     setShowSortModal(false);
-  }, [tempSortOptions]);
+  }, [tempSortOptions, setSortOption]);
 
   const openSortModal = useCallback(() => {
     // Initialize temp options based on current sort
@@ -306,7 +311,21 @@ export default function ShoppingListItemsScreen({ route, navigation }) {
 
   useEffect(() => {
     fetchShoppingItems();
-  }, [fetchShoppingItems]);
+
+    // Track this list as the last opened
+    setLastOpenedList({
+      listId: listId,
+      listName: listName
+    });
+  }, [fetchShoppingItems, listId, listName, setLastOpenedList]);
+
+  // Effect to load persisted sort option on component mount
+  useEffect(() => {
+    const persistedSortOption = getSortOption();
+    console.log('ShoppingListItems: Loading persisted sort option:', persistedSortOption);
+    setLocalSortOption(persistedSortOption);
+    setShouldResort(true);
+  }, [getSortOption]);
 
   // Effect to apply sorting when needed
   useEffect(() => {
@@ -428,12 +447,14 @@ export default function ShoppingListItemsScreen({ route, navigation }) {
         >
           {item.name}
         </Text>
-        <TouchableOpacity
-          style={styles.trashIconContainer}
-          onPress={() => confirmDeleteItem(item.id, item.name)}
-        >
-          <Trash2 size={18} color="#999" />
-        </TouchableOpacity>
+        {isOwner && (
+          <TouchableOpacity
+            style={styles.trashIconContainer}
+            onPress={() => confirmDeleteItem(item.id, item.name)}
+          >
+            <Trash2 size={18} color="#999" />
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -481,12 +502,14 @@ export default function ShoppingListItemsScreen({ route, navigation }) {
             <ShareIcon size={24} color={theme.colors.text} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-            onPress={() => setShowAddModal(true)}
-          >
-            <Plus size={24} color="#fff" />
-          </TouchableOpacity>
+          {isOwner && (
+            <TouchableOpacity
+              style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Plus size={24} color="#fff" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {loading ? (

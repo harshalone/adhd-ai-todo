@@ -25,6 +25,7 @@ const lightTheme = {
     onSurface: '#000000',
     tabBarBackground: '#FFFFFF',
     tabBarInactive: '#8E8E93',
+    orange: '#FF9500',
   },
 };
 
@@ -41,6 +42,7 @@ const darkTheme = {
     onSurface: '#FFFFFF',
     tabBarBackground: '#1C1C1E',
     tabBarInactive: '#8E8E93',
+    orange: '#FF9F0A',
   },
 };
 
