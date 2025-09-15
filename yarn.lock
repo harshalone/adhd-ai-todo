@@ -2604,6 +2604,14 @@ expo-keep-awake@~15.0.7:
   resolved "https://registry.yarnpkg.com/expo-keep-awake/-/expo-keep-awake-15.0.7.tgz#4eada556e1cca6c9c2e5aa39478fd01816cd0bc9"
   integrity sha512-CgBNcWVPnrIVII5G54QDqoE125l+zmqR4HR8q+MQaCfHet+dYpS5vX5zii/RMayzGN4jPgA4XYIQ28ePKFjHoA==
 
+expo-linking@^8.0.8:
+  version "8.0.8"
+  resolved "https://registry.yarnpkg.com/expo-linking/-/expo-linking-8.0.8.tgz#ad348c133d048043990177f67dfb6a89bf628a6e"
+  integrity sha512-MyeMcbFDKhXh4sDD1EHwd0uxFQNAc6VCrwBkNvvvufUsTYFq3glTA9Y8a+x78CPpjNqwNAamu74yIaIz7IEJyg==
+  dependencies:
+    expo-constants "~18.0.8"
+    invariant "^2.2.4"
+
 expo-modules-autolinking@3.0.10:
   version "3.0.10"
   resolved "https://registry.yarnpkg.com/expo-modules-autolinking/-/expo-modules-autolinking-3.0.10.tgz#eed2a9c3d462e6d74021b43597c2044ef45befef"
@@ -2623,12 +2631,22 @@ expo-modules-core@3.0.15:
   dependencies:
     invariant "^2.2.4"
 
+expo-sharing@^14.0.7:
+  version "14.0.7"
+  resolved "https://registry.yarnpkg.com/expo-sharing/-/expo-sharing-14.0.7.tgz#64845ea569c725a9a32705be7ef772e556134e1c"
+  integrity sha512-t/5tR8ZJNH6tMkHXlF7453UafNIfrpfTG+THN9EMLC4Wsi4bJuESPm3NdmWDg2D4LDALJI/LQo0iEnLAd5Sp4g==
+
 expo-status-bar@~3.0.8:
   version "3.0.8"
   resolved "https://registry.yarnpkg.com/expo-status-bar/-/expo-status-bar-3.0.8.tgz#ada8b863a405f1619cd87a4b2b874d84e7d21ce5"
   integrity sha512-L248XKPhum7tvREoS1VfE0H6dPCaGtoUWzRsUv7hGKdiB4cus33Rc0sxkWkoQ77wE8stlnUlL5lvmT0oqZ3ZBw==
   dependencies:
     react-native-is-edge-to-edge "^1.2.1"
+
+expo-store-review@^9.0.7:
+  version "9.0.7"
+  resolved "https://registry.yarnpkg.com/expo-store-review/-/expo-store-review-9.0.7.tgz#fac56e18dd9e06907a93e3eb1bce83267aeb582f"
+  integrity sha512-3hU2+8EV0e6N5cHrrC6bNX/xApybWtjkmuF6mbUsH0taZkQGlSEW3QTKbnE64kNtYxjM35saeojvfpEh+CFM7Q==
 
 expo-system-ui@~6.0.7:
   version "6.0.7"

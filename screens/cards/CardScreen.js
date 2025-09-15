@@ -6,6 +6,7 @@ import * as Brightness from 'expo-brightness';
 import * as Clipboard from 'expo-clipboard';
 import { getOptimalTextColor } from '../../utils/colorUtils';
 import { useBarcodeGenerator } from '../../hooks/useBarcodeGenerator';
+import { reviewService } from '../../services/reviewService';
 import { ChevronLeft, Trash2, Copy } from 'lucide-react-native';
 
 const lightTheme = {
@@ -47,7 +48,17 @@ export default function CardScreen({ route, navigation }) {
       }
     };
 
+    // Track card usage for review flow
+    const trackUsage = async () => {
+      try {
+        await reviewService.trackCardUsage();
+      } catch (error) {
+        console.warn('Failed to track card usage:', error);
+      }
+    };
+
     setBrightness();
+    trackUsage();
 
     // Restore original brightness when component unmounts
     return () => {
@@ -124,6 +135,18 @@ export default function CardScreen({ route, navigation }) {
     navigation.goBack();
   };
 
+  const handleBackPress = async () => {
+    try {
+      // Handle review flow before going back
+      await reviewService.handleReviewFlow();
+    } catch (error) {
+      console.warn('Review flow error:', error);
+    } finally {
+      // Always go back regardless of review flow result
+      navigation.goBack();
+    }
+  };
+
   const renderBarcode = () => {
     // Dynamic sizing based on barcode type
     const screenWidth = Dimensions.get('window').width;
@@ -163,7 +186,7 @@ export default function CardScreen({ route, navigation }) {
     <SafeAreaView style={[styles.container, { backgroundColor: lightTheme.colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+        <TouchableOpacity onPress={handleBackPress} style={styles.headerButton}>
           <ChevronLeft size={39} color={lightTheme.colors.text} />
         </TouchableOpacity>
         <TouchableOpacity onPress={handleDeleteCard} style={styles.headerButton}>

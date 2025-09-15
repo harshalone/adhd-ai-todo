@@ -4,6 +4,6 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 export const SUPABASE_PROJECT_URL = 'https://wggiqxnxuyienczdpmlv.supabase.co';
 
 // Legal Documents
-export const termsOfService = 'https://www.mobilecrm.org/p/stocard-terms';
+export const termsOfService = 'https://www.mobilecrm.org/p/terms';
 
-export const privacyPolicy = 'https://www.mobilecrm.org/p/stocard-privacy';
+export const privacyPolicy = 'https://www.mobilecrm.org/p/privacy';

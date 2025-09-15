@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Plus } from 'lucide-react-native';
+import { Plus, List, UserStar, Rows3 } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../utils/supabase';
 import useAuthStore from '../../stores/authStore';
@@ -59,9 +59,20 @@ export default function ShoppingScreen({ navigation }) {
   );
 
   const renderListItem = ({ item }) => (
-    <View style={[styles.listItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+    <TouchableOpacity
+      style={[styles.listItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+      onPress={() => navigation.navigate('ShoppingListItems', { listId: item.id, listName: item.list_name })}
+    >
+      <View style={styles.listIcon}>
+        <Rows3 size={22} color={theme.colors.textSecondary} />
+      </View>
       <Text style={[styles.listName, { color: theme.colors.text }]}>{item.list_name}</Text>
-    </View>
+      {item.owner && (
+        <View style={styles.ownerIcon}>
+          <UserStar size={20} color={theme.colors.primary} />
+        </View>
+      )}
+    </TouchableOpacity>
   );
 
   return (
@@ -136,14 +147,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
   },
+  listIcon: {
+    marginRight: 12,
+  },
   listName: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '600',
+  },
+  ownerIcon: {
+    marginLeft: 8,
   },
   emptyContainer: {
     flex: 1,

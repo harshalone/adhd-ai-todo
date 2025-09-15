@@ -2,6 +2,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { ChevronLeft } from 'lucide-react-native';
 import ShoppingScreen from '../screens/shopping/ShoppingScreen';
 import AddShoppingListScreen from '../screens/shopping/AddShoppingListScreen';
+import ShoppingListItemsScreen from '../screens/shopping/ShoppingListItemsScreen';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createStackNavigator();
@@ -40,6 +41,11 @@ export default function ShoppingStackNavigator() {
             <ChevronLeft size={39} color={theme.colors.text} />
           ),
         }}
+      />
+      <Stack.Screen
+        name="ShoppingListItems"
+        component={ShoppingListItemsScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
