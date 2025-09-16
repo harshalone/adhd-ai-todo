@@ -10,11 +10,13 @@ import {
   Animated,
   Keyboard,
   TouchableWithoutFeedback,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, Camera } from 'expo-camera';
 import { ChevronLeft, Camera as CameraIcon } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { cardsService } from '../../services/cardsService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -27,6 +29,8 @@ export default function ScanCardScreen({ navigation, route }) {
   const [cardName, setCardName] = useState(cardData?.name || '');
   const [cardNumber, setCardNumber] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [scannedData, setScannedData] = useState('');
 
   const cameraHeightAnim = useRef(new Animated.Value(1)).current;
 
@@ -66,35 +70,54 @@ export default function ScanCardScreen({ navigation, route }) {
   };
 
   const handleBarcodeScanned = ({ type, data }) => {
-    if (!scanned) {
+    if (!scanned && !showScanModal) {
       setScanned(true);
-      setCardNumber(data);
-      Alert.alert(
-        'Barcode Scanned!',
-        `Card number: ${data}`,
-        [
-          {
-            text: 'Scan Again',
-            onPress: () => setScanned(false),
-          },
-          {
-            text: 'OK',
-            style: 'default',
-          },
-        ]
-      );
+      setScannedData(data);
+      setShowScanModal(true);
     }
   };
 
-  const handleSave = () => {
-    // Placeholder function - will be implemented later
-    console.log('Save card:', { cardName, cardNumber });
-    Alert.alert('Success', 'Card saved successfully!', [
-      {
-        text: 'OK',
-        onPress: () => navigation.goBack(),
-      },
-    ]);
+  const handleScanModalConfirm = () => {
+    setCardNumber(scannedData);
+    setShowScanModal(false);
+    animateToInputMode();
+  };
+
+  const handleScanModalRescan = () => {
+    setShowScanModal(false);
+    setScanned(false);
+    setScannedData('');
+  };
+
+  const handleSave = async () => {
+    try {
+      console.log('Save card:', { cardName, cardNumber });
+
+      const cardToSave = {
+        name: cardName.trim(),
+        number: cardNumber.trim(),
+        bg_colour: cardData?.background_color || null,
+      };
+
+      const { data, error } = await cardsService.addLoyaltyCard(cardToSave);
+
+      if (error) {
+        console.error('Error saving card:', error);
+        Alert.alert('Error', 'Failed to save card. Please try again.');
+        return;
+      }
+
+      console.log('Card saved successfully:', data);
+      Alert.alert('Success', 'Card saved successfully!', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    } catch (error) {
+      console.error('Error saving card:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    }
   };
 
   if (hasPermission === null) {
@@ -256,6 +279,48 @@ export default function ScanCardScreen({ navigation, route }) {
             <Text style={styles.saveButtonText}>Save Card</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Custom Scan Modal */}
+        <Modal
+          visible={showScanModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowScanModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContainer, { backgroundColor: theme.colors.surface }]}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                Barcode Scanned!
+              </Text>
+              <Text style={[styles.modalSubtitle, { color: theme.colors.textSecondary }]}>
+                Card Number:
+              </Text>
+              <Text style={[styles.modalCardNumber, { color: theme.colors.text }]}>
+                {scannedData}
+              </Text>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonSecondary, { borderColor: theme.colors.border }]}
+                  onPress={handleScanModalRescan}
+                >
+                  <Text style={[styles.modalButtonText, { color: theme.colors.text }]}>
+                    Scan Again
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonPrimary, { backgroundColor: theme.colors.primary }]}
+                  onPress={handleScanModalConfirm}
+                >
+                  <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                    Use This
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
@@ -396,6 +461,72 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    marginHorizontal: 24,
+    borderRadius: 20,
+    paddingVertical: 24,
+    paddingHorizontal: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+    minWidth: screenWidth * 0.8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 8,
+    letterSpacing: -0.1,
+  },
+  modalCardNumber: {
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 24,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    letterSpacing: 0.5,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonSecondary: {
+    borderWidth: 1,
+  },
+  modalButtonPrimary: {
+    // backgroundColor will be set dynamically
+  },
+  modalButtonText: {
+    fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,
   },

@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, FlatList, RefreshControl, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus } from 'lucide-react-native';
+import { Plus, RefreshCw } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 import { cardsService } from '../services/cardsService';
 import { useState, useEffect, useCallback } from 'react';
@@ -112,6 +112,20 @@ export default function CardsScreen({ navigation }) {
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
               No cards added yet. Tap the + button to add your first card.
             </Text>
+            <TouchableOpacity
+              style={[styles.refreshButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+              onPress={onRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw
+                size={20}
+                color={theme.colors.primary}
+                style={refreshing ? { transform: [{ rotate: '45deg' }] } : {}}
+              />
+              <Text style={[styles.refreshButtonText, { color: theme.colors.primary }]}>
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <FlatList
@@ -130,6 +144,11 @@ export default function CardsScreen({ navigation }) {
             }
             showsVerticalScrollIndicator={false}
             key={screenData.width} // Force re-render on orientation change
+            ListFooterComponent={() => (
+              <Text style={[styles.pullToRefreshText, { color: theme.colors.textSecondary }]}>
+                pull to refresh
+              </Text>
+            )}
           />
         )}
       </View>
@@ -206,5 +225,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     marginTop: 'auto',
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 24,
+  },
+  refreshButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  pullToRefreshText: {
+    fontSize: 10,
+    fontWeight: '400',
+    textAlign: 'center',
+    marginTop: 4,
+    opacity: 0.6,
   },
 });

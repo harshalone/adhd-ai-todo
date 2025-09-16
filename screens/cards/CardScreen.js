@@ -7,6 +7,7 @@ import * as Clipboard from 'expo-clipboard';
 import { getOptimalTextColor } from '../../utils/colorUtils';
 import { useBarcodeGenerator } from '../../hooks/useBarcodeGenerator';
 import { reviewService } from '../../services/reviewService';
+import { cardsService } from '../../services/cardsService';
 import { ChevronLeft, Trash2, Copy } from 'lucide-react-native';
 
 const lightTheme = {
@@ -128,11 +129,33 @@ export default function CardScreen({ route, navigation }) {
     setShowDeleteModal(true);
   };
 
-  const confirmDeleteCard = () => {
-    // TODO: Implement database deletion
-    console.log('Deleting card:', card.id);
-    setShowDeleteModal(false);
-    navigation.goBack();
+  const confirmDeleteCard = async () => {
+    try {
+      console.log('Attempting to delete card:', { id: card.id, name: card.name });
+
+      // Call the cardsService to delete the card
+      const { error } = await cardsService.deleteLoyaltyCard(card.id);
+
+      if (error) {
+        console.error('Error deleting card from database:', error);
+        Alert.alert('Error', 'Failed to delete card. Please try again.');
+        return;
+      }
+
+      console.log('Card deleted successfully from database');
+      setShowDeleteModal(false);
+
+      // Show success message and navigate back
+      Alert.alert('Success', 'Card deleted successfully!', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    } catch (error) {
+      console.error('Unexpected error during card deletion:', error);
+      Alert.alert('Error', 'Something went wrong while deleting the card.');
+    }
   };
 
   const handleBackPress = async () => {
