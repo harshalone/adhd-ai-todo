@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, FlatList, RefreshControl, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, RefreshCw } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
 import { cardsService } from '../services/cardsService';
 import { useState, useEffect, useCallback } from 'react';
@@ -51,6 +52,8 @@ export default function CardsScreen({ navigation }) {
   };
 
   const handleCardPress = async (card) => {
+    // Haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Update last_used timestamp
     await cardsService.updateCardLastUsed(card.id);
     // Refresh the list to show updated order

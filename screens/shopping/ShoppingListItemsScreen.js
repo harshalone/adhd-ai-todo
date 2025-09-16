@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, TextInput, Modal, Alert, ScrollView, Share } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -85,6 +86,13 @@ export default function ShoppingListItemsScreen({ route, navigation }) {
 
   const toggleItemStatus = useCallback(async (itemId, currentStatus) => {
     const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+
+    // Haptic feedback - different for completion vs unchecking
+    if (newStatus === 'completed') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
 
     try {
       const { error } = await supabase
