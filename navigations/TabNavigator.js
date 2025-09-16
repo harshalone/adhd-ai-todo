@@ -36,7 +36,6 @@ export default function TabNavigator() {
           backgroundColor: theme.colors.tabBarBackground,
           borderTopColor: theme.colors.border,
           paddingTop: 0,
-          paddingBottom: 0,
           margin: 0,
           elevation: 0,
           shadowOpacity: 0,

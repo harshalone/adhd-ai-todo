@@ -460,7 +460,7 @@ export default function ShoppingListItemsScreen({ route, navigation }) {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.content}>
         <View style={styles.headerRow}>
           <TouchableOpacity

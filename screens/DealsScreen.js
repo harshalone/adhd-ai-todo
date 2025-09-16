@@ -1,22 +1,30 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator, ScrollView, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator, ScrollView, TouchableWithoutFeedback, Keyboard, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
+import { MapPin, Tag } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 import useAuthStore from '../stores/authStore';
+import useDealLocationStore from '../stores/dealLocationStore';
 import { supabase } from '../utils/supabase';
 
 export default function DealsScreen() {
   const { theme } = useTheme();
   const { user, isAuthenticated } = useAuthStore();
-  const [country, setCountry] = useState('');
-  const [stateRegion, setStateRegion] = useState('');
-  const [city, setCity] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasLocationPreference, setHasLocationPreference] = useState(false);
-  const scrollViewRef = useRef(null);
-  const countryInputRef = useRef(null);
-  const stateInputRef = useRef(null);
-  const cityInputRef = useRef(null);
+  const {
+    country,
+    stateRegion,
+    city,
+    hasLocationPreference,
+    isLoading,
+    setLoading,
+    setLocation,
+    getFormattedLocation
+  } = useDealLocationStore();
+
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [tempCountry, setTempCountry] = useState('');
+  const [tempStateRegion, setTempStateRegion] = useState('');
+  const [tempCity, setTempCity] = useState('');
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -41,22 +49,19 @@ export default function DealsScreen() {
 
       if (data && (data.country || data.state || data.city)) {
         console.log('DealsScreen: Found existing location preferences:', data);
-        setCountry(data.country || '');
-        setStateRegion(data.state || '');
-        setCity(data.city || '');
-        setHasLocationPreference(true);
+        setLocation(data.country || '', data.state || '', data.city || '');
       }
     } catch (error) {
       console.log('DealsScreen: Exception loading location preferences:', error);
     }
   };
 
-  const getStateRegionLabel = () => {
-    if (!country) return 'State/Region';
+  const getTempStateRegionLabel = () => {
+    if (!tempCountry) return 'State/Region';
 
     const countriesWithStates = ['United States', 'USA', 'US', 'Canada', 'Australia', 'India'];
     const isStateCountry = countriesWithStates.some(c =>
-      country.toLowerCase().includes(c.toLowerCase())
+      tempCountry.toLowerCase().includes(c.toLowerCase())
     );
 
     return isStateCountry ? 'State' : 'Region';
@@ -68,26 +73,26 @@ export default function DealsScreen() {
       return;
     }
 
-    if (!country.trim() || !city.trim()) {
+    if (!tempCountry.trim() || !tempCity.trim()) {
       Alert.alert('Error', 'Please enter at least your country and city');
       return;
     }
 
     console.log('DealsScreen: Saving location preferences:', {
-      country: country.trim(),
-      state: stateRegion.trim(),
-      city: city.trim(),
+      country: tempCountry.trim(),
+      state: tempStateRegion.trim(),
+      city: tempCity.trim(),
       userId: user.id
     });
 
-    setIsLoading(true);
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('accounts')
         .update({
-          country: country.trim(),
-          state: stateRegion.trim(),
-          city: city.trim()
+          country: tempCountry.trim(),
+          state: tempStateRegion.trim(),
+          city: tempCity.trim()
         })
         .eq('id', user.id);
 
@@ -98,34 +103,44 @@ export default function DealsScreen() {
       }
 
       console.log('DealsScreen: Location preferences saved successfully');
-      setHasLocationPreference(true);
+      setLocation(tempCountry.trim(), tempStateRegion.trim(), tempCity.trim());
+      setShowLocationModal(false);
       Alert.alert('Success', 'Your location preferences have been saved! We\'ll notify you when deals become available in your area.');
     } catch (error) {
       console.log('DealsScreen: Exception saving location preferences:', error);
       Alert.alert('Error', 'Failed to save location preferences. Please try again.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const handleUpdateLocation = () => {
-    setHasLocationPreference(false);
+    // Initialize temp values with current values
+    setTempCountry(country);
+    setTempStateRegion(stateRegion);
+    setTempCity(city);
+    setShowLocationModal(true);
   };
 
-  const scrollToInput = (inputRef) => {
-    setTimeout(() => {
-      inputRef.current?.measure((fx, fy, width, height, px, py) => {
-        const scrollToY = py - 100; // Offset to show input near top
-        scrollViewRef.current?.scrollTo({ y: Math.max(0, scrollToY), animated: true });
-      });
-    }, 100);
+  const handlePinPress = () => {
+    // Initialize temp values with current values
+    setTempCountry(country);
+    setTempStateRegion(stateRegion);
+    setTempCity(city);
+    setShowLocationModal(true);
   };
+
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.content}>
-          <Text style={[styles.title, { color: theme.colors.text }]}>Deals</Text>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: theme.colors.text }]}>Deals</Text>
+            <View style={[styles.pinButton, { backgroundColor: 'transparent' }]}>
+              {/* Empty space for consistency */}
+            </View>
+          </View>
           <View style={styles.authPrompt}>
             <Text style={[styles.authText, { color: theme.colors.text }]}>
               Please log in to set your location preferences and receive local deal notifications.
@@ -137,109 +152,145 @@ export default function DealsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView ref={scrollViewRef} style={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.title, { color: theme.colors.text }]}>Deals</Text>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: theme.colors.text }]}>Deals</Text>
+            <TouchableOpacity
+              style={[styles.pinButton, { backgroundColor: theme.colors.primary }]}
+              onPress={handlePinPress}
+            >
+              <MapPin size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
           {hasLocationPreference ? (
-            <View style={styles.locationDisplay}>
-              <Text style={[styles.subtitle, { color: theme.colors.text }]}>
-                Your Location Preferences
-              </Text>
-              <View style={styles.locationInfo}>
-                <Text style={[styles.locationText, { color: theme.colors.text }]}>
-                  {city}, {stateRegion && `${stateRegion}, `}{country}
-                </Text>
-                <TouchableOpacity
-                  style={[styles.updateButton, { backgroundColor: theme.colors.primary }]}
-                  onPress={handleUpdateLocation}
-                >
-                  <Text style={styles.updateButtonText}>Update Location</Text>
-                </TouchableOpacity>
+            <View style={styles.noDealsContainer}>
+              <View style={[styles.dealIconContainer, { backgroundColor: theme.colors.primary + '20' }]}>
+                <Tag size={64} color={theme.colors.primary} />
               </View>
-              <Text style={[styles.dealsMessage, { color: theme.colors.text }]}>
+              <Text style={[styles.noDealsText, { color: theme.colors.text }]}>
+                No deals for you at the moment
+              </Text>
+              <Text style={[styles.dealsMessage, { color: theme.colors.text, textAlign: 'center' }]}>
                 We'll show you deals available in your area here. If you have deals to offer in any city or town,
                 please contact us - we encourage locals to submit deals for their communities!
               </Text>
             </View>
           ) : (
-            <View style={styles.locationForm}>
-              <Text style={[styles.subtitle, { color: theme.colors.text }]}>
-                Set Your Location Preferences
-              </Text>
-              <Text style={[styles.description, { color: theme.colors.text }]}>
-                Tell us where you're located and we'll show you deals available in your area.
-                We encourage locals to contact us if you have deals for any city or town!
-              </Text>
-
-              <View style={styles.form}>
-                <Text style={[styles.label, { color: theme.colors.text }]}>Country</Text>
-                <TextInput
-                  ref={countryInputRef}
-                  style={[styles.input, {
-                    borderColor: theme.colors.border || '#ccc',
-                    backgroundColor: theme.colors.card || '#fff',
-                    color: theme.colors.text
-                  }]}
-                  value={country}
-                  onChangeText={setCountry}
-                  onFocus={() => scrollToInput(countryInputRef)}
-                  placeholder="Enter your country"
-                  placeholderTextColor={theme.colors.text + '80'}
-                />
-
-                <Text style={[styles.label, { color: theme.colors.text }]}>
-                  {getStateRegionLabel()}
+            <View style={styles.noLocationContainer}>
+              <View style={styles.noDealsContainer}>
+                <View style={[styles.dealIconContainer, { backgroundColor: theme.colors.primary + '20' }]}>
+                  <MapPin size={64} color={theme.colors.primary} />
+                </View>
+                <Text style={[styles.noDealsText, { color: theme.colors.text }]}>
+                  Please select your location
                 </Text>
-                <TextInput
-                  ref={stateInputRef}
-                  style={[styles.input, {
-                    borderColor: theme.colors.border || '#ccc',
-                    backgroundColor: theme.colors.card || '#fff',
-                    color: theme.colors.text
-                  }]}
-                  value={stateRegion}
-                  onChangeText={setStateRegion}
-                  onFocus={() => scrollToInput(stateInputRef)}
-                  placeholder={`Enter your ${getStateRegionLabel().toLowerCase()}`}
-                  placeholderTextColor={theme.colors.text + '80'}
-                />
-
-                <Text style={[styles.label, { color: theme.colors.text }]}>City</Text>
-                <TextInput
-                  ref={cityInputRef}
-                  style={[styles.input, {
-                    borderColor: theme.colors.border || '#ccc',
-                    backgroundColor: theme.colors.card || '#fff',
-                    color: theme.colors.text
-                  }]}
-                  value={city}
-                  onChangeText={setCity}
-                  onFocus={() => scrollToInput(cityInputRef)}
-                  placeholder="Enter your city"
-                  placeholderTextColor={theme.colors.text + '80'}
-                />
-
-                <TouchableOpacity
-                  style={[styles.saveButton, {
-                    backgroundColor: theme.colors.primary || '#007AFF',
-                    opacity: isLoading ? 0.7 : 1
-                  }]}
-                  onPress={handleSaveLocationPreferences}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.saveButtonText}>Save Location Preferences</Text>
-                  )}
-                </TouchableOpacity>
+                <Text style={[styles.dealsMessage, { color: theme.colors.text, textAlign: 'center' }]}>
+                  Click on the location icon above to set your location and see deals available in your area.
+                </Text>
               </View>
             </View>
           )}
-        </ScrollView>
+          </ScrollView>
+        </View>
       </TouchableWithoutFeedback>
+
+      {/* Location Update Modal */}
+      <Modal
+        visible={showLocationModal}
+        transparent={false}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowLocationModal(false)}
+      >
+        <SafeAreaView style={[styles.fullscreenModal, { backgroundColor: theme.colors.background }]}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalKeyboardAvoidingView}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Update Location</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowLocationModal(false)}
+              >
+                <Text style={[styles.closeButtonText, { color: theme.colors.textSecondary }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: theme.colors.text }]}>Country</Text>
+                <TextInput
+                  style={[styles.input, {
+                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.surface,
+                    color: theme.colors.text
+                  }]}
+                  value={tempCountry}
+                  onChangeText={setTempCountry}
+                  placeholder="Enter your country"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: theme.colors.text }]}>
+                  {getTempStateRegionLabel()}
+                </Text>
+                <TextInput
+                  style={[styles.input, {
+                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.surface,
+                    color: theme.colors.text
+                  }]}
+                  value={tempStateRegion}
+                  onChangeText={setTempStateRegion}
+                  placeholder={`Enter your ${getTempStateRegionLabel().toLowerCase()}`}
+                  placeholderTextColor={theme.colors.textSecondary}
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: theme.colors.text }]}>City</Text>
+                <TextInput
+                  style={[styles.input, {
+                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.surface,
+                    color: theme.colors.text
+                  }]}
+                  value={tempCity}
+                  onChangeText={setTempCity}
+                  placeholder="Enter your city"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  returnKeyType="done"
+                  onSubmitEditing={handleSaveLocationPreferences}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.saveButton, {
+                  backgroundColor: theme.colors.primary,
+                  opacity: isLoading ? 0.7 : 1
+                }]}
+                onPress={handleSaveLocationPreferences}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save Location</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -253,10 +304,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 0,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   title: {
     fontSize: 34,
     fontWeight: '700',
-    marginBottom: 20,
+  },
+  pinButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContent: {
+    flex: 1,
   },
   authPrompt: {
     flex: 1,
@@ -273,6 +339,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   locationForm: {
+    marginTop: 10,
+  },
+  noLocationContainer: {
     marginTop: 10,
   },
   subtitle: {
@@ -313,30 +382,85 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     lineHeight: 22,
   },
+  noDealsContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  dealIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  noDealsText: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
   form: {
     flex: 1,
+  },
+  // Fullscreen Modal Styles
+  fullscreenModal: {
+    flex: 1,
+  },
+  modalKeyboardAvoidingView: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  inputGroup: {
+    marginTop: 20,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
-    marginTop: 16,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
   },
   saveButton: {
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: 40,
+    marginBottom: 40,
   },
   saveButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 20,
     fontWeight: '600',
   },
 });

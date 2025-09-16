@@ -79,7 +79,7 @@ export default function SettingsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.colors.text }]}>Settings</Text>
 

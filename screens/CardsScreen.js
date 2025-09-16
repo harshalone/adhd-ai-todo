@@ -96,7 +96,7 @@ export default function CardsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>Cards</Text>
         <TouchableOpacity
