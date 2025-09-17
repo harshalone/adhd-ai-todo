@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
+import { SUPABASE_PROJECT_URL, SUPABASE_ANON_KEY } from './constants';
 
-// Replace with your Supabase project URL and anon key
-// For development/testing, using placeholder values that won't cause errors
-const supabaseUrl = 'https://wggiqxnxuyienczdpmlv.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZ2lxeG54dXlpZW5jemRwbWx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc2NTA5NjYsImV4cCI6MjA1MzIyNjk2Nn0.HQG38G7RBQ0En4saTB_v8hIY7L03Y0GpyTpO0Mp-9no';
+// Use constants from centralized configuration
+const supabaseUrl = SUPABASE_PROJECT_URL;
+const supabaseAnonKey = SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

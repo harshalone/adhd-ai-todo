@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import useAuthStore from '../../stores/authStore';
 import BackButton from '../../components/BackButton';
+import { CONTACT_US_API_URL } from '../../utils/constants';
 
 export default function ContactUsScreen({ navigation }) {
   const { theme } = useTheme();
@@ -45,9 +46,9 @@ export default function ContactUsScreen({ navigation }) {
       };
 
       console.log('ContactUs: Request body:', requestBody);
-      console.log('ContactUs: Making API call to:', 'https://www.mobilecrm.org/api/email/esend');
+      console.log('ContactUs: Making API call to:', CONTACT_US_API_URL);
 
-      const response = await fetch('https://www.mobilecrm.org/api/email/esend', {
+      const response = await fetch(CONTACT_US_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

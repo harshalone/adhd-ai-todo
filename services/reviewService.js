@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as StoreReview from 'expo-store-review';
 import * as Linking from 'expo-linking';
 import { Alert } from 'react-native';
+import { APP_STORE_ID, APP_STORE_URL } from '../utils/constants';
 
 const STORAGE_KEYS = {
   REVIEW_REQUESTED: 'app_review_requested',
@@ -12,8 +13,6 @@ const STORAGE_KEYS = {
 const REVIEW_CONFIG = {
   MIN_CARD_USAGE: 3, // Minimum number of card usages before showing review
   DAYS_BETWEEN_REQUESTS: 7, // Days to wait before showing review again if declined
-  APP_STORE_ID: '6741738531',
-  APP_STORE_URL: 'https://apps.apple.com/gb/app/stocard/id6741738531'
 };
 
 export const reviewService = {
@@ -130,20 +129,20 @@ export const reviewService = {
   // Open App Store for review
   async openAppStore() {
     try {
-      const url = `itms-apps://itunes.apple.com/app/viewContentsUserReviews/id${REVIEW_CONFIG.APP_STORE_ID}?action=write-review`;
+      const url = `itms-apps://itunes.apple.com/app/viewContentsUserReviews/id${APP_STORE_ID}?action=write-review`;
       const canOpen = await Linking.canOpenURL(url);
 
       if (canOpen) {
         await Linking.openURL(url);
       } else {
         // Fallback to web URL
-        await Linking.openURL(REVIEW_CONFIG.APP_STORE_URL);
+        await Linking.openURL(APP_STORE_URL);
       }
     } catch (error) {
       console.warn('Failed to open App Store:', error);
       // Try web fallback
       try {
-        await Linking.openURL(REVIEW_CONFIG.APP_STORE_URL);
+        await Linking.openURL(APP_STORE_URL);
       } catch (fallbackError) {
         console.warn('Failed to open App Store web URL:', fallbackError);
       }

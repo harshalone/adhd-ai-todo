@@ -3,6 +3,13 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const SUPABASE_PROJECT_URL = 'https://wggiqxnxuyienczdpmlv.supabase.co';
 
+// API Endpoints
+export const CONTACT_US_API_URL = 'https://www.mobilecrm.org/api/email/esend';
+
+// App Store Configuration
+export const APP_STORE_ID = '6741738531';
+export const APP_STORE_URL = 'https://apps.apple.com/gb/app/stocard/id6741738531';
+
 // Legal Documents
 export const termsOfService = 'https://www.mobilecrm.org/p/terms';
 
