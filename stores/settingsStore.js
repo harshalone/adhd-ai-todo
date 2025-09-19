@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { userService } from '../services/userService';
+import { countriesService } from '../services/countriesService';
 
 const useSettingsStore = create(
   persist(
@@ -57,6 +59,39 @@ const useSettingsStore = create(
         })),
 
       setCountry: (countryData) => set({ country: countryData }),
+
+      // Load user country from database
+      loadUserCountry: async (userId) => {
+        try {
+          const { data: userProfile, error } = await userService.getUserProfile(userId);
+
+          if (error || !userProfile?.country_code) {
+            console.log('No country_code found in user profile or error:', error);
+            return;
+          }
+
+          // Get country details by code
+          const { data: countryData, error: countryError } = await countriesService.getCountryByCode(userProfile.country_code);
+
+          if (countryError || !countryData) {
+            console.log('Error fetching country details:', countryError);
+            return;
+          }
+
+          // Update store with country from database
+          set({
+            country: {
+              name: countryData.name,
+              code: countryData.country_code,
+              country_uid: countryData.country_uid
+            }
+          });
+
+          console.log('User country loaded from database:', countryData.name);
+        } catch (error) {
+          console.error('Error loading user country:', error);
+        }
+      },
 
       updateNotifications: (notificationSettings) =>
         set((state) => ({

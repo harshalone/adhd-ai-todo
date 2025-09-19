@@ -43,8 +43,8 @@ export default function RegisterScreen({ navigation }) {
         return;
       }
 
-      // Navigate directly to OTP screen without alert
-      navigation.navigate('OTP', { email: email.trim(), isRegistration: true });
+      // Navigate to OTP Registration screen for onboarding flow
+      navigation.navigate('OTPRegistration', { email: email.trim() });
     } catch (error) {
       Alert.alert('Error', 'Failed to send OTP. Please try again.');
       console.error('Registration error:', error);

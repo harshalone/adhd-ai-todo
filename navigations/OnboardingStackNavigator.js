@@ -1,14 +1,13 @@
 import { createStackNavigator } from '@react-navigation/stack';
-import LoginScreen from '../screens/auth/LoginScreen';
-import RegisterScreen from '../screens/auth/RegisterScreen';
-import OTPScreen from '../screens/auth/OTPScreen';
-import OTPRegistrationScreen from '../screens/auth/OTPRegistrationScreen';
-import WebViewScreen from '../components/WebViewScreen';
+import OBLandingScreen from '../screens/onboarding/OBLandingScreen';
+import OBSelectCountry from '../screens/onboarding/OBSelectCountry';
+import OBAgeScreen from '../screens/onboarding/OBAgeScreen';
+import OBVideoScreen from '../screens/onboarding/OBVideoScreen';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createStackNavigator();
 
-export default function AuthStackNavigator() {
+export default function OnboardingStackNavigator() {
   const { theme } = useTheme();
 
   return (
@@ -28,39 +27,31 @@ export default function AuthStackNavigator() {
       }}
     >
       <Stack.Screen
-        name="Login"
-        component={LoginScreen}
+        name="OBLanding"
+        component={OBLandingScreen}
         options={{
           headerShown: false,
         }}
       />
       <Stack.Screen
-        name="Register"
-        component={RegisterScreen}
+        name="OBSelectCountry"
+        component={OBSelectCountry}
         options={{
           headerShown: false,
         }}
       />
       <Stack.Screen
-        name="OTP"
-        component={OTPScreen}
+        name="OBAge"
+        component={OBAgeScreen}
         options={{
           headerShown: false,
         }}
       />
       <Stack.Screen
-        name="OTPRegistration"
-        component={OTPRegistrationScreen}
+        name="OBVideoScreen"
+        component={OBVideoScreen}
         options={{
           headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="WebView"
-        component={WebViewScreen}
-        options={{
-          headerShown: false,
-          presentation: 'modal',
         }}
       />
     </Stack.Navigator>

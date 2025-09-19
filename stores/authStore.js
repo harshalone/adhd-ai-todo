@@ -12,17 +12,33 @@ const useAuthStore = create(
       accessToken: null,
       refreshToken: null,
       loading: false,
+      hasCompletedOnboarding: false,
 
       // Actions
       setLoading: (loading) => set({ loading }),
 
-      setAuthenticated: (user, tokens) =>
+      setAuthenticated: (user, tokens) => {
         set({
           isAuthenticated: true,
           user,
           accessToken: tokens?.access_token || tokens?.accessToken,
           refreshToken: tokens?.refresh_token || tokens?.refreshToken,
           loading: false,
+        });
+
+        // Load user settings including country from database
+        if (user?.id) {
+          // Import settings store dynamically to avoid circular dependency
+          import('../stores/settingsStore').then(({ default: useSettingsStore }) => {
+            const { loadUserCountry } = useSettingsStore.getState();
+            loadUserCountry(user.id);
+          });
+        }
+      },
+
+      completeOnboarding: () =>
+        set({
+          hasCompletedOnboarding: true,
         }),
 
       updateUser: (userData) =>
@@ -43,6 +59,7 @@ const useAuthStore = create(
           accessToken: null,
           refreshToken: null,
           loading: false,
+          hasCompletedOnboarding: false,
         }),
 
       logout: async () => {
@@ -73,6 +90,7 @@ const useAuthStore = create(
             accessToken: null,
             refreshToken: null,
             loading: false,
+            hasCompletedOnboarding: false,
           });
         }
       },
@@ -100,6 +118,15 @@ const useAuthStore = create(
                 accessToken: sessionData.session.access_token,
                 refreshToken: sessionData.session.refresh_token,
               });
+
+              // Load user settings including country from database
+              if (sessionData.session.user?.id) {
+                import('../stores/settingsStore').then(({ default: useSettingsStore }) => {
+                  const { loadUserCountry } = useSettingsStore.getState();
+                  loadUserCountry(sessionData.session.user.id);
+                });
+              }
+
               return true;
             } else {
               console.log('Failed to restore session, checking current session...');
@@ -118,6 +145,7 @@ const useAuthStore = create(
               user: null,
               accessToken: null,
               refreshToken: null,
+              hasCompletedOnboarding: false,
             });
             return false;
           }
@@ -132,6 +160,14 @@ const useAuthStore = create(
             refreshToken: data.session.refresh_token,
           });
 
+          // Load user settings including country from database
+          if (data.session.user?.id) {
+            import('../stores/settingsStore').then(({ default: useSettingsStore }) => {
+              const { loadUserCountry } = useSettingsStore.getState();
+              loadUserCountry(data.session.user.id);
+            });
+          }
+
           return true;
         } catch (error) {
           console.error('Auth check error:', error);
@@ -141,6 +177,7 @@ const useAuthStore = create(
             user: null,
             accessToken: null,
             refreshToken: null,
+            hasCompletedOnboarding: false,
           });
           return false;
         }
@@ -165,6 +202,14 @@ const useAuthStore = create(
                 refreshToken: session.refresh_token,
                 loading: false,
               });
+
+              // Load user settings including country from database
+              if (session.user?.id) {
+                import('../stores/settingsStore').then(({ default: useSettingsStore }) => {
+                  const { loadUserCountry } = useSettingsStore.getState();
+                  loadUserCountry(session.user.id);
+                });
+              }
             } else if (event === 'SIGNED_OUT' || !session) {
               console.log('User signed out via auth listener');
               set({
@@ -173,6 +218,7 @@ const useAuthStore = create(
                 accessToken: null,
                 refreshToken: null,
                 loading: false,
+                hasCompletedOnboarding: false,
               });
             } else if (event === 'TOKEN_REFRESHED' && session) {
               console.log('Token refreshed via auth listener');
@@ -203,6 +249,7 @@ const useAuthStore = create(
             user: null,
             accessToken: null,
             refreshToken: null,
+            hasCompletedOnboarding: false,
           });
         }
       },
@@ -215,6 +262,7 @@ const useAuthStore = create(
         user: state.user,
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
       }),
     }
   )

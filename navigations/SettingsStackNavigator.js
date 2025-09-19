@@ -7,6 +7,7 @@ import ContactUsScreen from '../screens/settings/ContactUsScreen';
 import DeleteAccountScreen from '../screens/settings/DeleteAccountScreen';
 import TermsScreen from '../screens/settings/TermsScreen';
 import PrivacyScreen from '../screens/settings/PrivacyScreen';
+import OnboardingStackNavigator from './OnboardingStackNavigator';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createStackNavigator();
@@ -29,6 +30,14 @@ export default function SettingsStackNavigator() {
       <Stack.Screen name="Terms" component={TermsScreen} />
       <Stack.Screen name="Privacy" component={PrivacyScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+      <Stack.Screen
+        name="Onboarding"
+        component={OnboardingStackNavigator}
+        options={{
+          presentation: 'fullScreenModal',
+          headerShown: false,
+        }}
+      />
     </Stack.Navigator>
   );
 }
