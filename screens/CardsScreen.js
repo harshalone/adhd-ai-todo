@@ -2,14 +2,19 @@ import { StyleSheet, Text, View, TouchableOpacity, FlatList, RefreshControl, Dim
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, RefreshCw } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import * as Brightness from 'expo-brightness';
 import { useTheme } from '../context/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
+import useSettingsStore from '../stores/settingsStore';
 import { cardsService } from '../services/cardsService';
 import { useState, useEffect, useCallback } from 'react';
 import moment from 'moment';
 import { getOptimalTextColor, getOptimalSecondaryTextColor } from '../utils/colorUtils';
+import CheckVersion from '../components/CheckVersion';
 
 export default function CardsScreen({ navigation }) {
   const { theme } = useTheme();
+  const { getOriginalBrightness } = useSettingsStore();
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,6 +41,31 @@ export default function CardsScreen({ navigation }) {
     setRefreshing(false);
   }, [fetchCards]);
 
+  // Track if we've navigated to CardScreen so we only restore brightness when coming back
+  const [hasNavigatedToCard, setHasNavigatedToCard] = useState(false);
+
+  // Restore brightness when screen comes into focus (only when returning from CardScreen)
+  useFocusEffect(
+    useCallback(() => {
+      if (hasNavigatedToCard) {
+        const restoreBrightness = async () => {
+          try {
+            const originalBrightness = getOriginalBrightness();
+            if (originalBrightness !== null) {
+              console.log('CardsScreen: Restoring brightness to:', originalBrightness);
+              await Brightness.setBrightnessAsync(originalBrightness);
+            }
+          } catch (error) {
+            console.warn('Could not restore brightness:', error);
+          }
+        };
+
+        restoreBrightness();
+        setHasNavigatedToCard(false); // Reset the flag
+      }
+    }, [getOriginalBrightness, hasNavigatedToCard])
+  );
+
   useEffect(() => {
     fetchCards();
 
@@ -58,6 +88,8 @@ export default function CardsScreen({ navigation }) {
     await cardsService.updateCardLastUsed(card.id);
     // Refresh the list to show updated order
     fetchCards();
+    // Set flag that we're navigating to CardScreen
+    setHasNavigatedToCard(true);
     // Navigate to card details
     navigation.navigate('CardScreen', { card });
   };
@@ -102,12 +134,15 @@ export default function CardsScreen({ navigation }) {
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>Cards</Text>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-          onPress={handleAddCard}
-        >
-          <Plus size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <CheckVersion />
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
+            onPress={handleAddCard}
+          >
+            <Plus size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
       <View style={styles.content}>
         {cards.length === 0 ? (
@@ -173,6 +208,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 34,
     fontWeight: '700',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   addButton: {
     width: 44,

@@ -8,7 +8,8 @@ import { getOptimalTextColor } from '../../utils/colorUtils';
 import { useBarcodeGenerator } from '../../hooks/useBarcodeGenerator';
 import { reviewService } from '../../services/reviewService';
 import { cardsService } from '../../services/cardsService';
-import { ChevronLeft, Trash2, Copy } from 'lucide-react-native';
+import { ChevronLeft, Trash2, Copy, Sun } from 'lucide-react-native';
+import SkeletonLoader from '../../components/SkeletonLoader';
 
 const lightTheme = {
   colors: {
@@ -37,15 +38,62 @@ export default function CardScreen({ route, navigation }) {
   const [originalBrightness, setOriginalBrightness] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     // Set screen to full brightness when component mounts
     const setBrightness = async () => {
       try {
-        const currentBrightness = await Brightness.getBrightnessAsync();
-        setOriginalBrightness(currentBrightness);
-        await Brightness.setBrightnessAsync(1.0);
+        // First, request permissions
+        const { status } = await Brightness.requestPermissionsAsync();
+        console.log('CardScreen: Permission status:', status);
+
+        if (status !== 'granted') {
+          console.warn('CardScreen: Brightness permission not granted');
+          return;
+        }
+
+        // Check if auto-brightness is enabled (this might help diagnose)
+        try {
+          const isUsingSystemBrightness = await Brightness.isUsingSystemBrightnessAsync();
+          console.log('CardScreen: Is using system brightness (auto-brightness):', isUsingSystemBrightness);
+        } catch (e) {
+          console.log('CardScreen: Could not check auto-brightness status');
+        }
+
+        const initialBrightness = await Brightness.getBrightnessAsync();
+        console.log('CardScreen: Current brightness before setting:', initialBrightness);
+
+        setOriginalBrightness(initialBrightness);
+
+        // Try system brightness first
+        await Brightness.setSystemBrightnessAsync(1.0);
+        console.log('CardScreen: System brightness set to 1.0');
+
+        // Small delay to let system process the change
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Check brightness after setting
+        const newBrightness = await Brightness.getBrightnessAsync();
+        console.log('CardScreen: Brightness after setting system brightness:', newBrightness);
+
+        if (newBrightness < 0.9) {
+          console.warn('CardScreen: System brightness failed, trying regular setBrightness');
+          // Fallback to regular brightness setting
+          await Brightness.setBrightnessAsync(1.0);
+
+          // Check again after fallback
+          const fallbackBrightness = await Brightness.getBrightnessAsync();
+          console.log('CardScreen: Brightness after fallback method:', fallbackBrightness);
+
+          if (fallbackBrightness < 0.9) {
+            console.warn('CardScreen: Both methods failed - likely auto-brightness is enabled');
+          }
+        } else {
+          console.log('CardScreen: Brightness successfully set to full');
+        }
       } catch (error) {
         console.warn('Could not set brightness:', error);
+        console.error('Brightness error details:', error);
       }
     };
 
@@ -67,7 +115,7 @@ export default function CardScreen({ route, navigation }) {
         Brightness.setBrightnessAsync(originalBrightness).catch(console.warn);
       }
     };
-  }, [originalBrightness]);
+  }, []); // Fixed: empty dependency array instead of [originalBrightness]
 
   const generateBarcodeImage = async () => {
     if (!card.number) return;
@@ -158,6 +206,24 @@ export default function CardScreen({ route, navigation }) {
     }
   };
 
+  const handleBrightnessIncrease = async () => {
+    try {
+      await Brightness.setBrightnessAsync(1.0);
+      console.log('Manual brightness set to full');
+
+      // Verify it worked
+      const newBrightness = await Brightness.getBrightnessAsync();
+      if (newBrightness > 0.9) {
+        Alert.alert('Success', 'Brightness increased to maximum');
+      } else {
+        Alert.alert('Note', 'Please manually adjust your device brightness for better barcode visibility');
+      }
+    } catch (error) {
+      console.warn('Could not set brightness manually:', error);
+      Alert.alert('Error', 'Could not adjust brightness. Please manually increase it in your device settings.');
+    }
+  };
+
   const handleBackPress = async () => {
     try {
       // Handle review flow before going back
@@ -184,9 +250,7 @@ export default function CardScreen({ route, navigation }) {
     return (
       <View style={styles.barcodeContainer}>
         {barcodeLoading ? (
-          <Text style={[styles.loadingText, { color: lightTheme.colors.textSecondary }]}>
-            Generating barcode...
-          </Text>
+          <SkeletonLoader count={1} type={is1DBarcode ? 'barcode' : 'qr'} />
         ) : generatedBarcode ? (
           <Image
             source={{ uri: generatedBarcode }}
@@ -212,9 +276,17 @@ export default function CardScreen({ route, navigation }) {
         <TouchableOpacity onPress={handleBackPress} style={styles.headerButton}>
           <ChevronLeft size={39} color={lightTheme.colors.text} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleDeleteCard} style={styles.headerButton}>
-          <Trash2 size={24} color="#FF3B30" />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={handleBrightnessIncrease}
+            style={styles.headerButton}
+          >
+            <Sun size={22} color={lightTheme.colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleDeleteCard} style={styles.headerButton}>
+            <Trash2 size={24} color="#FF3B30" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Tabs */}
@@ -241,6 +313,7 @@ export default function CardScreen({ route, navigation }) {
           ))}
         </View>
       </View>
+
 
       {/* Barcode Display */}
       <View style={styles.barcodeSection}>
@@ -312,8 +385,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingBottom: 16,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerButton: {
     padding: 4,
+    marginLeft: 8,
   },
   tabSection: {
     paddingHorizontal: 20,

@@ -11,7 +11,7 @@ export default function BackButton({ onPress }) {
       onPress={onPress}
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
-      <ChevronLeft size={30} color={theme.colors.text} />
+      <ChevronLeft size={39} color={theme.colors.text} />
     </TouchableOpacity>
   );
 }
@@ -19,6 +19,6 @@ export default function BackButton({ onPress }) {
 const styles = StyleSheet.create({
   backButton: {
     padding: 4,
-    marginRight: 8,
+    marginRight: 0,
   },
 });

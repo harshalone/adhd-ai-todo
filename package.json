@@ -17,6 +17,7 @@
     "@shopify/flash-list": "2.0.2",
     "@supabase/supabase-js": "^2.57.4",
     "expo": "~54.0.7",
+    "expo-application": "^7.0.7",
     "expo-brightness": "^14.0.7",
     "expo-camera": "^17.0.7",
     "expo-clipboard": "^8.0.7",

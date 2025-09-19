@@ -14,3 +14,7 @@ export const APP_STORE_URL = 'https://apps.apple.com/gb/app/stocard/id6741738531
 export const termsOfService = 'https://www.mobilecrm.org/p/terms';
 
 export const privacyPolicy = 'https://www.mobilecrm.org/p/privacy';
+
+export const APP_DB_ID = 'STOCARD123'; 
+
+export const APP_CURRENT_VERSION = '3.2.2'; 

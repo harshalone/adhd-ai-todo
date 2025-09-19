@@ -11,14 +11,30 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Modal,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, Camera } from 'expo-camera';
-import { ChevronLeft, Camera as CameraIcon } from 'lucide-react-native';
+import { ChevronLeft, Camera as CameraIcon, Palette } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { cardsService } from '../../services/cardsService';
 
 const { width: screenWidth } = Dimensions.get('window');
+
+const PRESET_COLORS = [
+  '#6366f1', // Indigo
+  '#8b5cf6', // Purple
+  '#06b6d4', // Cyan
+  '#10b981', // Emerald
+  '#f59e0b', // Amber
+  '#ef4444', // Red
+  '#ec4899', // Pink
+  '#84cc16', // Lime
+  '#6b7280', // Gray
+  '#1f2937', // Dark Gray
+  '#3b82f6', // Blue
+  '#f97316', // Orange
+];
 
 export default function ScanCardScreen({ navigation, route }) {
   const { theme } = useTheme();
@@ -31,6 +47,8 @@ export default function ScanCardScreen({ navigation, route }) {
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
   const [scannedData, setScannedData] = useState('');
+  const [selectedColor, setSelectedColor] = useState(cardData?.background_color || '#6366f1');
+  const [showColorModal, setShowColorModal] = useState(false);
 
   const cameraHeightAnim = useRef(new Animated.Value(1)).current;
 
@@ -89,6 +107,11 @@ export default function ScanCardScreen({ navigation, route }) {
     setScannedData('');
   };
 
+  const handleColorSelect = (color) => {
+    setSelectedColor(color);
+    setShowColorModal(false);
+  };
+
   const handleSave = async () => {
     try {
       console.log('Save card:', { cardName, cardNumber });
@@ -96,7 +119,7 @@ export default function ScanCardScreen({ navigation, route }) {
       const cardToSave = {
         name: cardName.trim(),
         number: cardNumber.trim(),
-        bg_colour: cardData?.background_color || null,
+        bg_colour: selectedColor,
       };
 
       const { data, error } = await cardsService.addLoyaltyCard(cardToSave);
@@ -231,23 +254,36 @@ export default function ScanCardScreen({ navigation, route }) {
           )}
         </Animated.View>
 
-        <View style={[styles.formContainer, { backgroundColor: theme.colors.background }]}>
+        <ScrollView
+          style={[styles.formContainer, { backgroundColor: theme.colors.background }]}
+          contentContainerStyle={styles.formContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
               Card Name
             </Text>
-            <TextInput
-              style={[styles.input, {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                color: theme.colors.text,
-              }]}
-              value={cardName}
-              onChangeText={setCardName}
-              placeholder="Enter card name"
-              placeholderTextColor={theme.colors.textSecondary}
-              onFocus={animateToInputMode}
-            />
+            <View style={styles.inputWithIcon}>
+              <TextInput
+                style={[styles.input, styles.inputWithRightIcon, {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text,
+                }]}
+                value={cardName}
+                onChangeText={setCardName}
+                placeholder="Enter card name"
+                placeholderTextColor={theme.colors.textSecondary}
+                onFocus={animateToInputMode}
+              />
+              <TouchableOpacity
+                style={[styles.colorPickerIcon, { backgroundColor: selectedColor }]}
+                onPress={() => setShowColorModal(true)}
+              >
+                <Palette size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
@@ -278,7 +314,7 @@ export default function ScanCardScreen({ navigation, route }) {
           >
             <Text style={styles.saveButtonText}>Save Card</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
 
         {/* Custom Scan Modal */}
         <Modal
@@ -318,6 +354,49 @@ export default function ScanCardScreen({ navigation, route }) {
                   </Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Color Picker Modal */}
+        <Modal
+          visible={showColorModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowColorModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.colorModalContainer, { backgroundColor: theme.colors.surface }]}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                Choose Card Color
+              </Text>
+
+              <View style={styles.colorGrid}>
+                {PRESET_COLORS.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorModalOption,
+                      { backgroundColor: color },
+                      selectedColor === color && styles.selectedColorModalOption
+                    ]}
+                    onPress={() => handleColorSelect(color)}
+                  >
+                    {selectedColor === color && (
+                      <View style={styles.colorModalCheck} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.colorModalClose, { backgroundColor: theme.colors.border }]}
+                onPress={() => setShowColorModal(false)}
+              >
+                <Text style={[styles.colorModalCloseText, { color: theme.colors.text }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -422,8 +501,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   formContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    flex: 1,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     shadowColor: '#000',
@@ -434,6 +512,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 5,
+  },
+  formContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    flexGrow: 1,
   },
   inputGroup: {
     marginBottom: 20,
@@ -451,6 +534,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     fontSize: 16,
     letterSpacing: -0.1,
+  },
+  inputWithIcon: {
+    position: 'relative',
+  },
+  inputWithRightIcon: {
+    paddingRight: 50,
+  },
+  colorPickerIcon: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   saveButton: {
     paddingVertical: 16,
@@ -526,6 +633,75 @@ const styles = StyleSheet.create({
     // backgroundColor will be set dynamically
   },
   modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  colorModalContainer: {
+    marginHorizontal: 24,
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+    minWidth: screenWidth * 0.8,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
+    marginVertical: 24,
+  },
+  colorModalOption: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  selectedColorModalOption: {
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  colorModalCheck: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  colorModalClose: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  colorModalCloseText: {
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,

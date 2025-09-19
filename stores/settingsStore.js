@@ -43,6 +43,11 @@ const useSettingsStore = create(
         biometricAuth: false,
       },
 
+      // Brightness settings
+      brightness: {
+        originalBrightness: null,
+      },
+
       // Actions
       setThemeMode: (mode) => set({ themeMode: mode }),
 
@@ -68,6 +73,14 @@ const useSettingsStore = create(
           app: { ...state.app, ...appSettings }
         })),
 
+      // Brightness actions
+      setOriginalBrightness: (brightness) =>
+        set((state) => ({
+          brightness: { ...state.brightness, originalBrightness: brightness }
+        })),
+
+      getOriginalBrightness: () => get().brightness.originalBrightness,
+
       // Reset all settings
       resetSettings: () => set({
         themeMode: 'automatic',
@@ -76,6 +89,7 @@ const useSettingsStore = create(
         notifications: { push: true, email: true, sms: false },
         privacy: { dataSharing: false, analytics: true, locationTracking: false },
         app: { language: 'en', currency: 'USD', biometricAuth: false },
+        brightness: { originalBrightness: null },
       }),
     }),
     {
@@ -88,6 +102,7 @@ const useSettingsStore = create(
         notifications: state.notifications,
         privacy: state.privacy,
         app: state.app,
+        brightness: state.brightness,
       }),
     }
   )
