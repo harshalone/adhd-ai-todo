@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "ADHD-AI-TODO",
+    "name": "Timo - AI Planner and Todo",
     "slug": "aitodo",
-    "version": "3.2.3",
-    "description": "All your loyalty cads 1 app",
+    "version": "1.0.0",
+    "description": "ADHD Todo, Task and Planning Assistant",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash-screen.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -19,8 +19,9 @@
       "buildNumber": "16",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "This app uses the camera to scan barcodes on loyalty cards and receipts for easy digital storage and management.",
-        "NSMicrophoneUsageDescription": "This app may access the microphone when using camera features."
+        "NSCameraUsageDescription": "This app uses the camera to scan notes for easy digital storage and management.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone to record voice notes and convert speech to text for creating todos and tasks.",
+        "NSSpeechRecognitionUsageDescription": "This app needs access to speech recognition to convert your voice to text for creating todos and tasks."
       }
     },
     "android": {
@@ -28,6 +29,10 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [
+        "RECORD_AUDIO",
+        "CAMERA"
+      ],
       "edgeToEdgeEnabled": true
     },
     "web": {
@@ -35,7 +40,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "fd660ad4-7149-4c2a-9a09-502f1b935215"
+        "projectId": ""
       }
     }
   }

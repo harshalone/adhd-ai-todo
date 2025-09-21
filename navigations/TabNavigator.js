@@ -1,9 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { CreditCard, ShoppingBag, Tag, Settings } from 'lucide-react-native';
+import { LaptopMinimal, Settings } from 'lucide-react-native';
 
-import CardsStackNavigator from './CardsStackNavigator';
-import ShoppingStackNavigator from './ShoppingStackNavigator';
-import DealsScreen from '../screens/DealsScreen';
+import TodoStackNavigator from './TodoStackNavigator';
 import SettingsStackNavigator from './SettingsStackNavigator';
 import { useTheme } from '../context/ThemeContext';
 
@@ -18,12 +16,8 @@ export default function TabNavigator() {
         tabBarIcon: ({ focused, color, size }) => {
           let IconComponent;
 
-          if (route.name === 'Cards') {
-            IconComponent = CreditCard;
-          } else if (route.name === 'Shopping') {
-            IconComponent = ShoppingBag;
-          } else if (route.name === 'Deals') {
-            IconComponent = Tag;
+          if (route.name === 'Todos') {
+            IconComponent = LaptopMinimal;
           } else if (route.name === 'Settings') {
             IconComponent = Settings;
           }
@@ -43,9 +37,7 @@ export default function TabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Cards" component={CardsStackNavigator} />
-      <Tab.Screen name="Shopping" component={ShoppingStackNavigator} />
-      <Tab.Screen name="Deals" component={DealsScreen} />
+      <Tab.Screen name="Todos" component={TodoStackNavigator} />
       <Tab.Screen name="Settings" component={SettingsStackNavigator} />
     </Tab.Navigator>
   );

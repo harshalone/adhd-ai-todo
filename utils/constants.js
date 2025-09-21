@@ -19,6 +19,7 @@ export const DEFAULT_CONSTANTS = {
   APP_STORE_URL: 'https://apps.apple.com/gb/app/stocard/id6741738531',
   TERMS_OF_SERVICE_URL: 'https://www.mobilecrm.org/p/terms',
   PRIVACY_POLICY_URL: 'https://www.mobilecrm.org/p/privacy',
+  SERVER_URL: 'https://www.mobilecrm.org/',
   ONBOARDING_VIDEO_ID: 'CI0pwaRei74',
 };
 
@@ -34,12 +35,13 @@ export const getDynamicConstant = async (key) => {
 };
 
 // Convenience functions for commonly used constants
-export const getContactUsUrl = () => getDynamicConstant('CONTACT_US_API_URL');
-export const getAppStoreId = () => getDynamicConstant('APP_STORE_ID');
-export const getAppStoreUrl = () => getDynamicConstant('APP_STORE_URL');
-export const getTermsOfServiceUrl = () => getDynamicConstant('TERMS_OF_SERVICE_URL');
-export const getPrivacyPolicyUrl = () => getDynamicConstant('PRIVACY_POLICY_URL');
-export const getOnboardingVideoId = () => getDynamicConstant('ONBOARDING_VIDEO_ID');
+export const getContactUsUrl = () => getDynamicConstant('contact_us_api');
+export const getAppStoreId = () => getDynamicConstant('app_store_id');
+export const getAppStoreUrl = () => getDynamicConstant('app_store_url');
+export const getTermsOfServiceUrl = () => getDynamicConstant('terms_url');
+export const getPrivacyPolicyUrl = () => getDynamicConstant('privacy_url');
+export const getServerUrl = () => getDynamicConstant('SERVER_URL');
+export const getOnboardingVideoId = () => getDynamicConstant('onboarding_video_youtube_id');
 
 // Backward compatibility - these will be removed in future versions
 // For now, they return the default values synchronously

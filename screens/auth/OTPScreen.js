@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
+    justifyContent: 'left',
     alignItems: 'center',
   },
   content: {

@@ -113,7 +113,7 @@ export default function LoginScreen({ navigation }) {
                     url: termsOfService
                   })}
                 >
-                  <Text style={[styles.legalLinkText, { color: '#3295c8' }]}>Terms & Conditions</Text>
+                  <Text style={[styles.legalLinkText, { color: '#ffffff' }]}>Terms & Conditions</Text>
                 </TouchableOpacity>
                 <Text style={[styles.linkSeparator, { color: theme.colors.textSecondary }]}> • </Text>
                 <TouchableOpacity
@@ -121,7 +121,7 @@ export default function LoginScreen({ navigation }) {
                     url: privacyPolicy
                   })}
                 >
-                  <Text style={[styles.legalLinkText, { color: '#3295c8' }]}>Privacy Policy</Text>
+                  <Text style={[styles.legalLinkText, { color: '#ffffff' }]}>Privacy Policy</Text>
                 </TouchableOpacity>
               </View>
               <Text style={[styles.agreementText, { color: theme.colors.textSecondary }]}>
@@ -135,7 +135,7 @@ export default function LoginScreen({ navigation }) {
               Don't have an account?{' '}
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={[styles.linkText, { color: '#3295c8' }]}>
+              <Text style={[styles.linkText, { color: '#ffffff' }]}>
                 Sign Up
               </Text>
             </TouchableOpacity>
