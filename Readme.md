@@ -1,3 +1,6 @@
+# New Repo
+ADHD AI Todo
+
 # build the ios 
 eas build --platform ios
 
