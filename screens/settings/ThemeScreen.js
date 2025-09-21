@@ -1,13 +1,15 @@
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Sun, Moon, Smartphone, Check } from 'lucide-react-native';
+import { Sun, Moon, Smartphone, Check, RotateCcw } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
 import useSettingsStore from '../../stores/settingsStore';
+import useAuthStore from '../../stores/authStore';
 import BackButton from '../../components/BackButton';
 
 export default function ThemeScreen({ navigation }) {
   const { theme } = useTheme();
   const { themeMode, setThemeMode } = useSettingsStore();
+  const { hasCompletedOnboarding, resetOnboarding } = useAuthStore();
 
   const themeOptions = [
     {
@@ -32,6 +34,31 @@ export default function ThemeScreen({ navigation }) {
 
   const handleThemeChange = (selectedTheme) => {
     setThemeMode(selectedTheme);
+  };
+
+  const handleResetOnboarding = () => {
+    Alert.alert(
+      'Reset Onboarding',
+      'This will reset the onboarding flow. You will see the onboarding screens again the next time you use the app. Do you want to continue?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: () => {
+            resetOnboarding();
+            Alert.alert(
+              'Onboarding Reset',
+              'The onboarding flow has been reset. You will see the onboarding screens next time you restart the app.',
+              [{ text: 'OK' }]
+            );
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -82,6 +109,31 @@ export default function ThemeScreen({ navigation }) {
             );
           })}
         </View>
+
+        {hasCompletedOnboarding && (
+          <View style={styles.resetSection}>
+            <TouchableOpacity
+              style={[
+                styles.resetButton,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                },
+              ]}
+              onPress={handleResetOnboarding}
+            >
+              <View style={styles.resetContent}>
+                <RotateCcw size={20} color={theme.colors.text} />
+                <Text style={[styles.resetText, { color: theme.colors.text }]}>
+                  Reset Onboarding
+                </Text>
+              </View>
+              <Text style={[styles.resetSubtext, { color: theme.colors.text }]}>
+                Go through the welcome flow again
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -141,5 +193,31 @@ const styles = StyleSheet.create({
   optionSubtitle: {
     fontSize: 14,
     opacity: 0.7,
+  },
+  resetSection: {
+    marginTop: 32,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  resetButton: {
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+  },
+  resetContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  resetText: {
+    fontSize: 17,
+    fontWeight: '600',
+    marginLeft: 12,
+  },
+  resetSubtext: {
+    fontSize: 14,
+    opacity: 0.7,
+    marginLeft: 32,
   },
 });

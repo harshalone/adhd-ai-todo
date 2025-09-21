@@ -1,12 +1,13 @@
 import { StyleSheet, Text, View, TouchableOpacity, Dimensions, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowRight, SkipForward } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import BackButton from '../../components/BackButton';
 import useAuthStore from '../../stores/authStore';
 import * as Haptics from 'expo-haptics';
+import { getOnboardingVideoId } from '../../utils/constants';
 
 const { width, height } = Dimensions.get('window');
 
@@ -14,10 +15,25 @@ export default function OBVideoScreen({ navigation }) {
   const { theme } = useTheme();
   const { completeOnboarding } = useAuthStore();
   const [videoError, setVideoError] = useState(false);
+  const [embedUrl, setEmbedUrl] = useState('');
+  const insets = useSafeAreaInsets();
 
-  // YouTube video ID extracted from the URL
-  const videoId = 'bpi8Uul4r-w';
-  const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&controls=1&showinfo=0&rel=0&modestbranding=1`;
+  useEffect(() => {
+    const loadVideoId = async () => {
+      try {
+        const videoId = await getOnboardingVideoId();
+        const url = `https://www.youtube.com/embed/${videoId}?autoplay=0&controls=1&showinfo=0&rel=0&modestbranding=1`;
+        setEmbedUrl(url);
+      } catch (error) {
+        console.error('Failed to load video ID:', error);
+        // Fallback to default
+        setEmbedUrl('https://www.youtube.com/embed/CI0pwaRei74?autoplay=0&controls=1&showinfo=0&rel=0&modestbranding=1');
+      }
+    };
+
+    loadVideoId();
+  }, []);
+
 
   const handleCompleteOnboarding = () => {
     // Mark onboarding as completed
@@ -49,10 +65,10 @@ export default function OBVideoScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#000' }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Video Container - Full Screen 9:16 aspect ratio */}
       <View style={styles.videoContainer}>
-        {!videoError ? (
+        {!videoError && embedUrl ? (
           <WebView
             source={{ uri: embedUrl }}
             style={styles.video}
@@ -76,7 +92,7 @@ export default function OBVideoScreen({ navigation }) {
       </View>
 
       {/* Back Button */}
-      <View style={styles.backButtonContainer}>
+      <View style={[styles.backButtonContainer, { top: insets.top + 10 }]}>
         <BackButton
           onPress={() => navigation.goBack()}
           style={styles.floatingBackButton}
@@ -84,7 +100,7 @@ export default function OBVideoScreen({ navigation }) {
       </View>
 
       {/* Bottom Buttons */}
-      <View style={styles.bottomCTA}>
+      <View style={[styles.bottomCTA, { paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.buttonContainer}>
           {/* Skip Button */}
           <TouchableOpacity
@@ -105,7 +121,7 @@ export default function OBVideoScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -114,16 +130,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   videoContainer: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: width,
     height: height,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   video: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: width,
-    height: (width * 16) / 9, // 9:16 aspect ratio
-    minHeight: height,
+    height: height,
   },
   errorContainer: {
     flex: 1,
@@ -141,7 +163,6 @@ const styles = StyleSheet.create({
   },
   backButtonContainer: {
     position: 'absolute',
-    top: 60,
     left: 20,
     zIndex: 10,
   },
@@ -158,7 +179,6 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 20,
     paddingVertical: 24,
-    paddingBottom: 40,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   buttonContainer: {

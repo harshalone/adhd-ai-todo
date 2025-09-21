@@ -2,7 +2,7 @@
   "expo": {
     "name": "Stocard",
     "slug": "stocard",
-    "version": "3.2.2",
+    "version": "3.2.3",
     "description": "All your loyalty cads 1 app",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.Stocard",
-      "buildNumber": "15",
+      "buildNumber": "16",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "This app uses the camera to scan barcodes on loyalty cards and receipts for easy digital storage and management.",

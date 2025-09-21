@@ -41,6 +41,11 @@ const useAuthStore = create(
           hasCompletedOnboarding: true,
         }),
 
+      resetOnboarding: () =>
+        set({
+          hasCompletedOnboarding: false,
+        }),
+
       updateUser: (userData) =>
         set((state) => ({
           user: { ...state.user, ...userData }
@@ -59,7 +64,6 @@ const useAuthStore = create(
           accessToken: null,
           refreshToken: null,
           loading: false,
-          hasCompletedOnboarding: false,
         }),
 
       logout: async () => {
@@ -90,7 +94,6 @@ const useAuthStore = create(
             accessToken: null,
             refreshToken: null,
             loading: false,
-            hasCompletedOnboarding: false,
           });
         }
       },
@@ -145,7 +148,6 @@ const useAuthStore = create(
               user: null,
               accessToken: null,
               refreshToken: null,
-              hasCompletedOnboarding: false,
             });
             return false;
           }
@@ -177,7 +179,6 @@ const useAuthStore = create(
             user: null,
             accessToken: null,
             refreshToken: null,
-            hasCompletedOnboarding: false,
           });
           return false;
         }
@@ -218,8 +219,7 @@ const useAuthStore = create(
                 accessToken: null,
                 refreshToken: null,
                 loading: false,
-                hasCompletedOnboarding: false,
-              });
+                  });
             } else if (event === 'TOKEN_REFRESHED' && session) {
               console.log('Token refreshed via auth listener');
               set({
@@ -249,7 +249,6 @@ const useAuthStore = create(
             user: null,
             accessToken: null,
             refreshToken: null,
-            hasCompletedOnboarding: false,
           });
         }
       },
