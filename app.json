@@ -31,6 +31,8 @@
       },
       "permissions": [
         "RECORD_AUDIO",
+        "CAMERA",
+        "RECORD_AUDIO",
         "CAMERA"
       ],
       "edgeToEdgeEnabled": true
@@ -40,8 +42,14 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "2e591489-5ee9-449b-aec9-44c2ebfc72ca"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/2e591489-5ee9-449b-aec9-44c2ebfc72ca"
     }
   }
 }
