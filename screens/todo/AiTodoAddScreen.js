@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, TextInput, ActivityIndicator, Animated, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   useAudioRecorder,
@@ -8,8 +8,10 @@ import {
   setAudioModeAsync,
   useAudioRecorderState,
 } from 'expo-audio';
-import { Mic, MicOff } from 'lucide-react-native';
-import * as FileSystem from 'expo-file-system/legacy'; 
+import { Mic, MicOff, ChevronDown, ChevronUp, Wand2, Plus } from 'lucide-react-native';
+import { Confetti, ConfettiMethods } from 'react-native-fast-confetti';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Haptics from 'expo-haptics';
 import BackButton from '../../components/BackButton';
 import TodoListItem from '../../components/TodoListItem';
 import { useTheme } from '../../context/ThemeContext';
@@ -22,6 +24,7 @@ export default function AiTodoAddScreen({ navigation }) {
   const recorderState = useAudioRecorderState(audioRecorder);
   const [recordedURI, setRecordedURI] = useState(null);
   const [base64Audio, setBase64Audio] = useState(null);
+  const [audioFileSize, setAudioFileSize] = useState(null);
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [transcribedText, setTranscribedText] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -31,6 +34,16 @@ export default function AiTodoAddScreen({ navigation }) {
   const [processingError, setProcessingError] = useState(null);
   const [isSavingTasks, setIsSavingTasks] = useState(false);
   const [typingText, setTypingText] = useState('');
+  const [isBlueContainerCollapsed, setIsBlueContainerCollapsed] = useState(false);
+  const [isParsedTasksCollapsed, setIsParsedTasksCollapsed] = useState(false);
+  const [savingTaskIndex, setSavingTaskIndex] = useState(-1);
+  const [triggerConfetti, setTriggerConfetti] = useState(false);
+  const [aiMessage, setAiMessage] = useState('');
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const dotAnim = useRef(new Animated.Value(1)).current;
+  const taskSaveAnims = useRef([]).current;
+  const confettiRef = useRef(null);
   
 
   useEffect(() => {
@@ -58,6 +71,55 @@ export default function AiTodoAddScreen({ navigation }) {
 
     setupAudio();
   }, []);
+
+  // Recording animation effect
+  useEffect(() => {
+    if (recorderState.isRecording) {
+      // Start pulsing animation - keeping it within button bounds
+      const pulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 0.95,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      // Start dot blinking animation
+      const dotAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(dotAnim, {
+            toValue: 0.3,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dotAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      pulseAnimation.start();
+      dotAnimation.start();
+
+      return () => {
+        pulseAnimation.stop();
+        dotAnimation.stop();
+      };
+    } else {
+      // Reset animations when not recording
+      pulseAnim.setValue(1);
+      dotAnim.setValue(1);
+    }
+  }, [recorderState.isRecording, pulseAnim, dotAnim]);
 
   const startRecording = async () => {
     if (!permissionGranted) {
@@ -107,7 +169,15 @@ export default function AiTodoAddScreen({ navigation }) {
         encoding: FileSystem.EncodingType.Base64,
       });
       setBase64Audio(base64);
-      console.log('Audio converted to base64, length:', base64.length);
+
+      // Get file size
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (fileInfo.exists) {
+        const sizeInMB = (fileInfo.size / (1024 * 1024)).toFixed(1);
+        setAudioFileSize(`${sizeInMB} MB`);
+      }
+
+      console.log('Audio converted to base64, file size:', audioFileSize);
     } catch (error) {
       console.error('Error converting to base64:', error);
       Alert.alert('Error', 'Failed to convert audio to base64: ' + error.message);
@@ -201,10 +271,17 @@ export default function AiTodoAddScreen({ navigation }) {
     setIsProcessingTasks(true);
     setProcessingError(null);
     setParsedTasks([]);
+    setIsBlueContainerCollapsed(true);
 
     try {
       const SERVER_URL = await getServerUrl();
       const todoUrl = SERVER_URL + 'api/ai/todo';
+
+      // Get current time from user's phone
+      const currentTime = new Date();
+      const currentTimeISO = currentTime.toISOString();
+      const currentTimeLocal = currentTime.toLocaleString();
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
       const response = await fetch(todoUrl, {
         method: 'POST',
@@ -213,6 +290,12 @@ export default function AiTodoAddScreen({ navigation }) {
         },
         body: JSON.stringify({
           text: transcribedText,
+          currentTime: {
+            iso: currentTimeISO,
+            local: currentTimeLocal,
+            timezone: timezone,
+            timestamp: currentTime.getTime()
+          }
         }),
       });
 
@@ -224,6 +307,10 @@ export default function AiTodoAddScreen({ navigation }) {
 
       if (result.tasks && Array.isArray(result.tasks)) {
         setParsedTasks(result.tasks);
+        // Store the AI message for later display
+        if (result.message) {
+          setAiMessage(result.message);
+        }
       } else {
         throw new Error('Invalid response format: tasks not found');
       }
@@ -246,11 +333,44 @@ export default function AiTodoAddScreen({ navigation }) {
     setIsSavingTasks(true);
 
     try {
-      const savePromises = parsedTasks.map(async (task) => {
+      // Initialize task animations
+      taskSaveAnims.length = 0;
+      parsedTasks.forEach((_, index) => {
+        taskSaveAnims[index] = new Animated.Value(1);
+      });
+
+      // Save tasks one by one with animation
+      for (let i = 0; i < parsedTasks.length; i++) {
+        setSavingTaskIndex(i);
+
+        // Haptic feedback for each task
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+        // Animate task being processed
+        Animated.sequence([
+          Animated.timing(taskSaveAnims[i], {
+            toValue: 1.1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(taskSaveAnims[i], {
+            toValue: 0.95,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(taskSaveAnims[i], {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ]).start();
+
+        const task = parsedTasks[i];
+
         // Convert AI task format to our database format
         const todoData = {
           title: task.title,
-          priority: 0, // Default priority
+          priority: task.priority !== undefined ? task.priority : 0, // Use AI priority or default to 0
           due_date: task.date && task.due_time
             ? `${task.date}T${task.due_time}:00`
             : null,
@@ -261,40 +381,38 @@ export default function AiTodoAddScreen({ navigation }) {
           alert_minutes: task.reminder ? [task.reminder] : null,
         };
 
-        return todosService.addTodo(todoData);
-      });
+        const result = await todosService.addTodo(todoData);
 
-      const results = await Promise.all(savePromises);
+        if (result.error) {
+          throw new Error(`Failed to save task: ${task.title}`);
+        }
 
-      // Check if any failed
-      const failures = results.filter(result => result.error);
-      if (failures.length > 0) {
-        throw new Error(`Failed to save ${failures.length} tasks`);
+        // Small delay between tasks for better UX
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
-      Alert.alert(
-        'Success!',
-        `Successfully added ${parsedTasks.length} tasks to your todo list.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Clear everything and go back
-              clearRecording();
-              setParsedTasks([]);
-              navigation.goBack();
-            }
-          }
-        ]
-      );
+      // Success haptic feedback
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Show popup and trigger confetti simultaneously
+      setShowSuccessPopup(true);
+      setTriggerConfetti(true);
+
+      // Stop confetti after 3 seconds (popup stays until user clicks OK)
+      setTimeout(() => {
+        setTriggerConfetti(false);
+      }, 3000);
 
     } catch (error) {
       console.error('Save tasks error:', error);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Save Error', 'Failed to save some tasks: ' + error.message);
     } finally {
       setIsSavingTasks(false);
+      setSavingTaskIndex(-1);
     }
   };
+
 
 
 
@@ -302,11 +420,13 @@ export default function AiTodoAddScreen({ navigation }) {
   const clearRecording = () => {
     setRecordedURI(null);
     setBase64Audio(null);
+    setAudioFileSize(null);
     setTranscribedText('');
     setTranscriptionError(null);
     setParsedTasks([]);
     setProcessingError(null);
     setTypingText('');
+    setAiMessage('');
   };
 
   const retryTranscription = async () => {
@@ -315,11 +435,20 @@ export default function AiTodoAddScreen({ navigation }) {
     }
   };
 
+  const handleSuccessPopupOK = () => {
+    setShowSuccessPopup(false);
+    clearRecording();
+    setParsedTasks([]);
+    setAiMessage('');
+    // Navigate to TodoMain (the main todo list screen)
+    navigation.navigate('TodoMain');
+  };
+
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <BackButton onPress={() => navigation.goBack()} />
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>AI Todo Recorder</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>AI Todo</Text>
         <View style={{ width: 44 }} />
       </View>
       
@@ -328,158 +457,239 @@ export default function AiTodoAddScreen({ navigation }) {
         contentContainerStyle={[styles.scrollContent, styles.topAligned]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Transcription Text Area */}
-        <View style={[styles.transcriptionContainer, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.transcriptionLabel, { color: theme.colors.text }]}>
-            Tell us what you want to do:
-          </Text>
-          
-          {isTranscribing ? (
-            <View style={styles.transcribingContainer}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-              <Text style={[styles.transcribingText, { color: theme.colors.textSecondary }]}>
-                {typingText}
+        {/* Main Blue Container - Collapsible */}
+        {isBlueContainerCollapsed ? (
+          <TouchableOpacity
+            style={[styles.collapsedContainer, { backgroundColor: theme.colors.primary }]}
+            onPress={() => setIsBlueContainerCollapsed(false)}
+          >
+            <View style={styles.collapsedContent}>
+              <Text style={[styles.collapsedText, { color: '#ffffff' }]}>
+                Tell us what you want to do
+              </Text>
+              <Text style={[styles.expandHint, { color: 'rgba(255,255,255,0.7)' }]}>
+                Tap to expand
               </Text>
             </View>
-          ) : (
-            <TextInput
-              style={[
-                styles.transcriptionInput, 
-                { 
+            <ChevronDown size={20} color="rgba(255,255,255,0.8)" />
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.mainContainer, { backgroundColor: theme.colors.primary }]}>
+            <TouchableOpacity
+              style={styles.mainHeaderContainer}
+              onPress={() => setIsBlueContainerCollapsed(true)}
+            >
+              <Text style={[styles.transcriptionLabel, { color: '#ffffff' }]}>
+                Tell us what you want to do:
+              </Text>
+              <ChevronUp size={20} color="rgba(255,255,255,0.8)" />
+            </TouchableOpacity>
+
+            {isTranscribing ? (
+              <View style={[
+                styles.transcribingContainer,
+                {
                   backgroundColor: theme.colors.background,
-                  color: theme.colors.text,
                   borderColor: theme.colors.border || theme.colors.textSecondary + '30'
                 }
-              ]}
-              multiline
-              numberOfLines={6}
-              value={transcribedText}
-              onChangeText={setTranscribedText}
-              placeholder="Your transcribed todo will appear here..."
-              placeholderTextColor={theme.colors.textSecondary}
-              textAlignVertical="top"
-            />
-          )}
-          
-          {transcriptionError && (
-            <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: theme.colors.danger || '#f44336' }]}>
-                {transcriptionError}
-              </Text>
-              <TouchableOpacity
-                style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
-                onPress={retryTranscription}
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Convert to Tasks Button */}
-          {transcribedText && !isTranscribing && parsedTasks.length === 0 && (
-            <TouchableOpacity
-              style={[styles.processButton, { backgroundColor: theme.colors.primary }]}
-              onPress={processTasksWithAI}
-              disabled={isProcessingTasks}
-            >
-              {isProcessingTasks ? (
-                <View style={styles.buttonContent}>
-                  <ActivityIndicator size="small" color="white" />
-                  <Text style={[styles.buttonText, { marginLeft: 8 }]}>Converting...</Text>
-                </View>
-              ) : (
-                <Text style={styles.buttonText}>Convert to tasks</Text>
-              )}
-            </TouchableOpacity>
-          )}
-
-          {processingError && (
-            <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: theme.colors.danger || '#f44336' }]}>
-                {processingError}
-              </Text>
-              <TouchableOpacity
-                style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
-                onPress={processTasksWithAI}
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* Recording Controls */}
-        <View style={styles.recordingSection}>
-          <TouchableOpacity
-            style={[
-              styles.recordButton,
-              recorderState.isRecording
-                ? [styles.stopButton, { backgroundColor: '#f44336' }]
-                : [styles.startButton, { backgroundColor: '#f44336' }],
-              !permissionGranted && [styles.disabledButton, { backgroundColor: theme.colors.surface }]
-            ]}
-            onPress={recorderState.isRecording ? stopRecording : startRecording}
-            disabled={!permissionGranted}
-          >
-            {recorderState.isRecording ? (
-              <MicOff size={28} color="white" />
+              ]}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={[styles.transcribingText, { color: theme.colors.textSecondary }]}>
+                  {typingText}
+                </Text>
+              </View>
             ) : (
-              <Mic size={28} color="white" />
+              <TextInput
+                style={[
+                  styles.transcriptionInput,
+                  {
+                    backgroundColor: theme.colors.background,
+                    color: theme.colors.text,
+                    borderColor: theme.colors.border || theme.colors.textSecondary + '30'
+                  }
+                ]}
+                multiline
+                numberOfLines={6}
+                value={transcribedText}
+                onChangeText={setTranscribedText}
+                placeholder="Your transcribed todo will appear here..."
+                placeholderTextColor={theme.colors.textSecondary}
+                textAlignVertical="top"
+              />
+            )}
+
+            {transcriptionError && (
+              <View style={styles.errorContainer}>
+                <Text style={[styles.errorText, { color: '#ffffff' }]}>
+                  {transcriptionError}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.retryButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+                  onPress={retryTranscription}
+                >
+                  <Text style={[styles.retryButtonText, { color: '#ffffff' }]}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+
+            {processingError && (
+              <View style={styles.errorContainer}>
+                <Text style={[styles.errorText, { color: '#ffffff' }]}>
+                  {processingError}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.retryButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+                  onPress={processTasksWithAI}
+                >
+                  <Text style={[styles.retryButtonText, { color: '#ffffff' }]}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Recording Controls */}
+            <View style={styles.recordingWrapper}>
+              <TouchableOpacity
+                style={[
+                  styles.recordButton,
+                  recorderState.isRecording
+                    ? [styles.stopButton, { backgroundColor: '#ff4444' }]
+                    : [styles.startButton, { backgroundColor: 'rgba(255,255,255,0.2)' }],
+                  !permissionGranted && [styles.disabledButton, { backgroundColor: 'rgba(255,255,255,0.1)' }]
+                ]}
+                onPress={recorderState.isRecording ? stopRecording : startRecording}
+                disabled={!permissionGranted}
+              >
+                <Animated.View
+                  style={[
+                    styles.micContainer,
+                    { transform: [{ scale: pulseAnim }] },
+                  ]}
+                >
+                  {recorderState.isRecording ? (
+                    <>
+                      <MicOff size={36} color="white" />
+                      <Animated.View
+                        style={[
+                          styles.recordingDot,
+                          { opacity: dotAnim }
+                        ]}
+                      />
+                    </>
+                  ) : (
+                    <Mic size={36} color="white" />
+                  )}
+                </Animated.View>
+              </TouchableOpacity>
+
+              {recorderState.isRecording && (
+                <Text style={[styles.recordingText, { color: '#ffffff' }]}>
+                  Click again to stop
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Convert to Tasks Button - Outside Blue Rectangle */}
+        {transcribedText && !isTranscribing && (
+          <TouchableOpacity
+            style={[styles.convertButton, { backgroundColor: '#22C55E' }]}
+            onPress={processTasksWithAI}
+            disabled={isProcessingTasks}
+          >
+            {isProcessingTasks ? (
+              <View style={styles.buttonContent}>
+                <ActivityIndicator size="small" color="white" />
+                <Text style={[styles.buttonText, { marginLeft: 8, color: '#ffffff' }]}>Converting...</Text>
+              </View>
+            ) : (
+              <View style={styles.buttonContent}>
+                <Wand2 size={20} color="white" />
+                <Text style={[styles.buttonText, { marginLeft: 8, color: '#ffffff' }]}>Convert to tasks</Text>
+              </View>
             )}
           </TouchableOpacity>
-
-          <Text style={[styles.statusText, { color: theme.colors.textSecondary }]}>
-            Status: {recorderState.isRecording ? 'Recording...' : 'Idle'}
-          </Text>
-        </View>
+        )}
 
         {/* Parsed Tasks Display */}
         {parsedTasks.length > 0 && (
-          <View style={[styles.tasksContainer, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.tasksHeader, { color: theme.colors.text }]}>
-              Parsed Tasks ({parsedTasks.length})
-            </Text>
-
-            {parsedTasks.map((task, index) => (
-              <TodoListItem
-                key={index}
-                item={task}
-                showCheckbox={false}
-              />
-            ))}
-
+          <View style={[styles.tasksContainer, { backgroundColor: '#ffffff' }]}>
             <TouchableOpacity
-              style={[styles.saveAllButton, { backgroundColor: '#22C55E' }]}
-              onPress={saveAllTasks}
-              disabled={isSavingTasks}
+              style={styles.tasksHeaderContainer}
+              onPress={() => setIsParsedTasksCollapsed(!isParsedTasksCollapsed)}
             >
-              {isSavingTasks ? (
-                <View style={styles.buttonContent}>
-                  <ActivityIndicator size="small" color="white" />
-                  <Text style={[styles.buttonText, { marginLeft: 8 }]}>Saving...</Text>
-                </View>
+              <Text style={[styles.tasksHeader, { color: theme.colors.text }]}>
+                Parsed Tasks ({parsedTasks.length})
+              </Text>
+              {isParsedTasksCollapsed ? (
+                <ChevronDown size={20} color={theme.colors.text} />
               ) : (
-                <Text style={styles.buttonText}>Add all tasks to your todo</Text>
+                <ChevronUp size={20} color={theme.colors.text} />
               )}
             </TouchableOpacity>
+
+            {!isParsedTasksCollapsed && (
+              <>
+                {parsedTasks.map((task, index) => (
+                  <Animated.View
+                    key={index}
+                    style={{
+                      transform: [{ scale: taskSaveAnims[index] || 1 }],
+                      opacity: savingTaskIndex === index ? 0.7 : 1,
+                    }}
+                  >
+                    <TodoListItem
+                      item={{
+                        ...task,
+                        priority: task.priority !== undefined ? task.priority : 0, // Use AI priority
+                        completed: false, // Never show tasks as completed during preview/saving
+                      }}
+                      showCheckbox={true}
+                      onToggleComplete={() => {}} // No-op for parsed tasks
+                    />
+                    {savingTaskIndex === index && (
+                      <View style={styles.savingOverlay}>
+                        <ActivityIndicator size="small" color="#22C55E" />
+                        <Text style={[styles.savingText, { color: '#22C55E' }]}>Saving...</Text>
+                      </View>
+                    )}
+                  </Animated.View>
+                ))}
+
+                <TouchableOpacity
+                  style={[styles.saveAllButton, { backgroundColor: '#22C55E' }]}
+                  onPress={saveAllTasks}
+                  disabled={isSavingTasks}
+                >
+                  {isSavingTasks ? (
+                    <View style={styles.buttonContent}>
+                      <ActivityIndicator size="small" color="white" />
+                      <Text style={[styles.buttonText, { marginLeft: 8 }]}>Saving...</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.buttonContent}>
+                      <Plus size={20} color="white" />
+                      <Text style={[styles.buttonText, { marginLeft: 8 }]}>Add all tasks to your todo</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
 
         {/* Audio Player and Results */}
         {recordedURI && (
           <View style={[styles.resultContainer, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.resultText, { color: theme.colors.primary }]}>Recording Complete!</Text>
-
-
-            {/* Base64 Debug Info (Collapsible) */}
-            {base64Audio && (
-              <View style={styles.base64Container}>
-                <Text style={[styles.base64Label, { color: theme.colors.text }]}>Audio Data:</Text>
-                <Text style={[styles.base64Text, { color: theme.colors.textSecondary }]}>
-                  Base64 length: {base64Audio.length} characters
+            <View style={styles.recordingInfo}>
+              <Text style={[styles.resultText, { color: theme.colors.primary }]}>Recording Complete</Text>
+              {audioFileSize && (
+                <Text style={[styles.fileSizeText, { color: theme.colors.textSecondary }]}>
+                  {audioFileSize}
                 </Text>
-              </View>
-            )}
+              )}
+            </View>
 
             <TouchableOpacity
               style={[styles.clearButton, { backgroundColor: theme.colors.danger || '#f44336' }]}
@@ -495,6 +705,47 @@ export default function AiTodoAddScreen({ navigation }) {
           Microphone: {permissionGranted ? '✓ Granted' : '✗ Not granted'}
         </Text>
       </ScrollView>
+
+
+      {/* Confetti Component */}
+      <Confetti
+        ref={confettiRef}
+        autoplay={triggerConfetti}
+        loop={false}
+        duration={3000}
+        particleCount={150}
+        spread={360}
+        startVelocity={45}
+        colors={['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#A8E6CF', '#FFB6C1', '#98D8E8']}
+        emissionRate={50}
+        explosiveness={0.8}
+        gravity={0.8}
+        decay={0.94}
+      />
+
+      {/* Custom Success Popup Modal */}
+      <Modal
+        visible={showSuccessPopup}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleSuccessPopupOK}
+      >
+        <View style={styles.popupOverlay}>
+          <View style={styles.popupContainer}>
+            <Text style={styles.popupEmoji}>🎉</Text>
+            <Text style={styles.popupTitle}>Success!</Text>
+            <Text style={styles.popupMessage}>
+              {aiMessage || 'Tasks have been added successfully!'}
+            </Text>
+            <TouchableOpacity
+              style={styles.popupButton}
+              onPress={handleSuccessPopupOK}
+            >
+              <Text style={styles.popupButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -507,7 +758,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     paddingBottom: 16,
   },
   headerTitle: {
@@ -520,7 +771,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 40,
   },
   topAligned: {
@@ -532,15 +784,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
-  transcriptionContainer: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 30,
+  mainContainer: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  mainHeaderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   transcriptionLabel: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 10,
+    flex: 1,
   },
   transcriptionInput: {
     borderWidth: 1,
@@ -549,13 +807,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 120,
     maxHeight: 200,
+    marginBottom: 16,
   },
   transcribingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    justifyContent: 'flex-start',
+    padding: 12,
     gap: 10,
+    borderRadius: 8,
+    marginBottom: 16,
+    minHeight: 120,
+    maxHeight: 200,
+    borderWidth: 1,
   },
   transcribingText: {
     fontSize: 16,
@@ -582,17 +846,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  recordingSection: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
   recordButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    marginBottom: 15,
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 120,
+    maxHeight: 200,
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: {
@@ -601,34 +862,64 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
+    overflow: 'hidden',
   },
   startButton: {},
   stopButton: {},
   disabledButton: {},
-  recordButtonContent: {
-    flexDirection: 'row',
+  recordingWrapper: {
+    width: '100%',
+    marginTop: 16,
+  },
+  recordingGlow: {
+    shadowColor: '#ff4444',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  micContainer: {
+    position: 'relative',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
   },
-  recordButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+  recordingDot: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: 'white',
   },
-  statusText: {
-    fontSize: 16,
+  recordingText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 12,
     textAlign: 'center',
+    opacity: 0.9,
   },
   resultContainer: {
-    padding: 20,
+    padding: 16,
     borderRadius: 12,
     marginTop: 10,
     alignItems: 'center',
   },
+  recordingInfo: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   resultText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  fileSizeText: {
+    fontSize: 12,
     textAlign: 'center',
   },
   playerContainer: {
@@ -662,20 +953,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
   },
-  base64Container: {
-    width: '100%',
-    marginBottom: 15,
-    alignItems: 'center',
-  },
-  base64Label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 5,
-  },
-  base64Text: {
-    fontSize: 12,
-    textAlign: 'center',
-  },
   clearButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -698,26 +975,154 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
+  convertButton: {
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 120,
+    maxHeight: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 20,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   tasksContainer: {
     marginTop: 20,
-    padding: 16,
+    paddingVertical: 20,
     borderRadius: 12,
+  },
+  tasksHeaderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 20,
   },
   tasksHeader: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 12,
+    flex: 1,
     textAlign: 'center',
   },
   saveAllButton: {
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
     borderRadius: 8,
+    padding: 12,
+    minHeight: 120,
+    maxHeight: 200,
+    justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
+    marginTop: 16,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  collapsedContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  collapsedContent: {
+    flex: 1,
+  },
+  collapsedText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  expandHint: {
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  savingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 8,
+    gap: 8,
+  },
+  savingText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  popupOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 100,
+  },
+  popupContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingVertical: 40,
+    paddingHorizontal: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+    minWidth: 280,
+    maxWidth: '90%',
+  },
+  popupEmoji: {
+    fontSize: 50,
+    marginBottom: 16,
+  },
+  popupTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#22C55E',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  popupMessage: {
+    fontSize: 16,
+    color: '#374151',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  popupButton: {
+    backgroundColor: '#22C55E',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 25,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  popupButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

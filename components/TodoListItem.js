@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Circle, Clock, AlertTriangle, Check, Edit3 } from 'lucide-react-native';
+import { Circle, Clock, AlertTriangle, Check, Edit3, Bell } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 import moment from 'moment';
 
@@ -57,7 +57,7 @@ export default function TodoListItem({ item, onPress, onToggleComplete, onEdit, 
   const dateTimeText = getDateTimeText();
 
   return (
-    <TouchableOpacity
+    <View
       style={[
         styles.listItem,
         {
@@ -65,71 +65,89 @@ export default function TodoListItem({ item, onPress, onToggleComplete, onEdit, 
           opacity: opacity,
         }
       ]}
-      onPress={() => onPress && onPress(item)}
     >
-      {showCheckbox && (
-        <TouchableOpacity
-          onPress={() => onToggleComplete && onToggleComplete(item)}
-          style={styles.checkboxContainer}
-        >
-          {item.completed ? (
-            <View style={[styles.completedCircle, { backgroundColor: '#22C55E' }]}>
-              <Check size={14} color="#fff" strokeWidth={3} />
-            </View>
-          ) : (
-            <Circle size={20} color={theme.colors.textSecondary} />
-          )}
-        </TouchableOpacity>
-      )}
-
-      <View style={[styles.todoContent, !showCheckbox && styles.todoContentNoCheckbox]}>
-        <View style={styles.todoFirstRow}>
-          <Text
-            style={[
-              styles.todoTitle,
-              {
-                color: theme.colors.text,
-                textDecorationLine: item.completed ? 'line-through' : 'none'
-              }
-            ]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
+      <View style={styles.leftSection}>
+        {showCheckbox && (
+          <TouchableOpacity
+            onPress={() => onToggleComplete && onToggleComplete(item)}
+            style={styles.checkboxContainer}
           >
-            {item.title}
-          </Text>
-          <View style={styles.actionsContainer}>
-            <Text
+            {item.completed ? (
+              <View style={[styles.completedCircle, { backgroundColor: '#22C55E' }]}>
+                <Check size={14} color="#fff" strokeWidth={3} />
+              </View>
+            ) : (
+              <Circle size={20} color={theme.colors.textSecondary} />
+            )}
+          </TouchableOpacity>
+        )}
+
+        {showCheckbox && (
+          <View style={styles.priorityContainer}>
+            <View
               style={[
-                styles.priorityText,
-                { color: getPriorityColor(item.priority || 0) }
+                styles.priorityBadge,
+                { backgroundColor: getPriorityColor(item.priority || 0) }
               ]}
             >
-              {getPriorityText(item.priority || 0)}
-            </Text>
-            {onEdit && (
-              <TouchableOpacity
-                onPress={() => onEdit(item)}
-                style={styles.editButton}
+              <Text
+                style={styles.priorityText}
               >
-                <Edit3 size={12} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            )}
+                {getPriorityText(item.priority || 0)}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
+      </View>
+
+      <TouchableOpacity
+        style={[styles.todoToggleArea, !showCheckbox && styles.todoContentNoCheckbox]}
+        onPress={() => onToggleComplete && onToggleComplete(item)}
+      >
+        <Text
+          style={[
+            styles.todoTitle,
+            {
+              color: theme.colors.text,
+              textDecorationLine: item.completed ? 'line-through' : 'none'
+            }
+          ]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {item.title}
+        </Text>
         {dateTimeText && (
           <Text style={[styles.todoDateTime, { color: theme.colors.textSecondary }]}>
             {dateTimeText}
           </Text>
         )}
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+
+      {onEdit && (
+        <TouchableOpacity
+          onPress={() => onEdit(item)}
+          style={styles.editArea}
+        >
+          <View style={[styles.iconButton, { backgroundColor: theme.colors.primary }]}>
+            <Edit3 size={10} color="#fff" />
+          </View>
+          <View style={[styles.iconButton, { backgroundColor: item.alert_minutes ? '#FF6B6B' : '#9CA3AF' }]}>
+            <Bell
+              size={10}
+              color="#fff"
+            />
+          </View>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   listItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     padding: 12,
     marginBottom: 6,
     borderRadius: 8,
@@ -144,8 +162,11 @@ const styles = StyleSheet.create({
     minHeight: 56,
     maxHeight: 80,
   },
-  checkboxContainer: {
+  leftSection: {
+    alignItems: 'center',
     marginRight: 10,
+  },
+  checkboxContainer: {
     alignSelf: 'flex-start',
     marginTop: 2,
   },
@@ -156,50 +177,56 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  todoContent: {
-    flex: 1,
+  priorityContainer: {
+    marginTop: 4,
+    alignItems: 'center',
+  },
+  priorityBadge: {
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    minWidth: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todoToggleArea: {
+    flex: 2,
+    paddingTop: 2,
+    paddingRight: 8,
   },
   todoContentNoCheckbox: {
     marginLeft: 0,
   },
-  todoFirstRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  editArea: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingVertical: 8,
+    paddingRight: 4,
+  },
+  iconButton: {
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    minWidth: 14,
     alignItems: 'center',
-    marginBottom: 2,
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   todoTitle: {
     fontSize: 15,
     fontWeight: '500',
-    flex: 1,
-    marginRight: 8,
     lineHeight: 18,
   },
   priorityText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 3,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    overflow: 'hidden',
-    minWidth: 16,
+    color: '#fff',
     textAlign: 'center',
   },
   todoDateTime: {
     fontSize: 12,
     marginTop: 1,
     lineHeight: 16,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  editButton: {
-    padding: 2,
-    borderRadius: 3,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });

@@ -7,6 +7,7 @@ import ContactUsScreen from '../screens/settings/ContactUsScreen';
 import DeleteAccountScreen from '../screens/settings/DeleteAccountScreen';
 import TermsScreen from '../screens/settings/TermsScreen';
 import PrivacyScreen from '../screens/settings/PrivacyScreen';
+import NotificationSettingsScreen from '../screens/settings/NotificationSettingsScreen';
 import OnboardingStackNavigator from './OnboardingStackNavigator';
 import { useTheme } from '../context/ThemeContext';
 
@@ -27,6 +28,7 @@ export default function SettingsStackNavigator() {
       <Stack.Screen name="Theme" component={ThemeScreen} />
       <Stack.Screen name="Country" component={CountryScreen} />
       <Stack.Screen name="ContactUs" component={ContactUsScreen} />
+      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="Terms" component={TermsScreen} />
       <Stack.Screen name="Privacy" component={PrivacyScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />

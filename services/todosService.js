@@ -1,4 +1,5 @@
 import { supabase } from '../utils/supabase';
+import { notificationService } from './notificationService';
 
 export const todosService = {
   // Fetch all todos for the current user, sorted by priority and due date
@@ -17,6 +18,24 @@ export const todosService = {
       return { data, error: null };
     } catch (error) {
       console.error('Get todos error:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Get a specific todo by ID
+  async getTodoById(todoId) {
+    try {
+      const { data, error } = await supabase
+        .from('todos')
+        .select('*')
+        .eq('id', todoId)
+        .is('deleted_at', null)
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Get todo by ID error:', error);
       return { data: null, error };
     }
   },
@@ -47,6 +66,18 @@ export const todosService = {
         .single();
 
       if (error) throw error;
+
+      // Schedule notifications for the new todo if it has alerts and due date
+      if (data && data.alert_minutes && data.due_date) {
+        try {
+          await notificationService.scheduleNotificationForTodo(data);
+          console.log(`Scheduled notifications for todo: ${data.title}`);
+        } catch (notifError) {
+          console.error('Error scheduling notifications for new todo:', notifError);
+          // Don't fail todo creation if notification scheduling fails
+        }
+      }
+
       return { data, error: null };
     } catch (error) {
       console.error('Add todo error:', error);
@@ -68,6 +99,17 @@ export const todosService = {
         .single();
 
       if (error) throw error;
+
+      // Cancel notifications when todo is completed
+      if (data && completed) {
+        try {
+          await notificationService.cancelNotificationsForTodo(todoId);
+          console.log(`Cancelled notifications for completed todo: ${todoId}`);
+        } catch (notifError) {
+          console.error('Error cancelling notifications for completed todo:', notifError);
+        }
+      }
+
       return { data, error: null };
     } catch (error) {
       console.error('Toggle todo completion error:', error);
@@ -89,6 +131,17 @@ export const todosService = {
         .single();
 
       if (error) throw error;
+
+      // Reschedule notifications if todo is updated with new timing or alerts
+      if (data && (updates.alert_minutes !== undefined || updates.due_date !== undefined)) {
+        try {
+          await notificationService.rescheduleNotificationsForTodo(data);
+          console.log(`Rescheduled notifications for updated todo: ${data.title}`);
+        } catch (notifError) {
+          console.error('Error rescheduling notifications for updated todo:', notifError);
+        }
+      }
+
       return { data, error: null };
     } catch (error) {
       console.error('Update todo error:', error);
@@ -108,6 +161,15 @@ export const todosService = {
         .eq('id', todoId);
 
       if (error) throw error;
+
+      // Cancel notifications when todo is deleted
+      try {
+        await notificationService.cancelNotificationsForTodo(todoId);
+        console.log(`Cancelled notifications for deleted todo: ${todoId}`);
+      } catch (notifError) {
+        console.error('Error cancelling notifications for deleted todo:', notifError);
+      }
+
       return { error: null };
     } catch (error) {
       console.error('Delete todo error:', error);
@@ -124,10 +186,45 @@ export const todosService = {
         .eq('id', todoId);
 
       if (error) throw error;
+
+      // Cancel notifications when todo is permanently deleted
+      try {
+        await notificationService.cancelNotificationsForTodo(todoId);
+        console.log(`Cancelled notifications for permanently deleted todo: ${todoId}`);
+      } catch (notifError) {
+        console.error('Error cancelling notifications for permanently deleted todo:', notifError);
+      }
+
       return { error: null };
     } catch (error) {
       console.error('Permanently delete todo error:', error);
       return { error };
+    }
+  },
+
+  // Schedule notifications for all incomplete todos (useful for app startup)
+  async scheduleAllNotifications() {
+    try {
+      const { data: todos, error } = await this.getTodos();
+      if (error) throw error;
+
+      if (todos && todos.length > 0) {
+        const incompleteTodos = todos.filter(todo => !todo.completed);
+        const result = await notificationService.scheduleNotificationsForTodos(incompleteTodos);
+
+        if (result.error) {
+          console.error('Error scheduling notifications for todos:', result.error);
+          return { error: result.error };
+        }
+
+        console.log(`Scheduled notifications for ${incompleteTodos.length} todos`);
+        return { scheduledCount: incompleteTodos.length, error: null };
+      }
+
+      return { scheduledCount: 0, error: null };
+    } catch (error) {
+      console.error('Error scheduling all notifications:', error);
+      return { scheduledCount: 0, error };
     }
   },
 };

@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View, TouchableOpacity, FlatList, RefreshControl, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, FlatList, RefreshControl, Dimensions, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, RefreshCw, Mic } from 'lucide-react-native';
+import { Plus, RefreshCw, Mic, ChevronDown, ChevronUp } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,6 +16,9 @@ export default function TodoHomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
+  const [selectedDate, setSelectedDate] = useState(moment());
+  const [completedCollapsed, setCompletedCollapsed] = useState(false);
+  const [incompleteCollapsed, setIncompleteCollapsed] = useState(false);
 
   const fetchTodos = useCallback(async () => {
     try {
@@ -85,6 +88,95 @@ export default function TodoHomeScreen({ navigation }) {
     navigation.navigate('EditTodo', { todo });
   };
 
+  const getWeekDays = () => {
+    const startOfWeek = selectedDate.clone().startOf('week');
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      days.push(startOfWeek.clone().add(i, 'days'));
+    }
+    return days;
+  };
+
+  const completedTodos = todos.filter(todo => todo.completed);
+  const incompleteTodos = todos.filter(todo => !todo.completed);
+
+  const renderWeeklyDatePicker = () => {
+    const weekDays = getWeekDays();
+    const dayAbbreviations = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    return (
+      <View style={styles.weekContainer}>
+        <View style={styles.weekScrollContainer}>
+          {weekDays.map((day, index) => {
+            const isSelected = day.isSame(selectedDate, 'day');
+            const isToday = day.isSame(moment(), 'day');
+
+            return (
+              <TouchableOpacity
+                key={day.format('YYYY-MM-DD')}
+                style={[
+                  styles.dayContainer,
+                  isSelected && { backgroundColor: theme.colors.primary },
+                  isToday && !isSelected && { borderColor: theme.colors.primary }
+                ]}
+                onPress={() => setSelectedDate(day)}
+              >
+                <Text style={[
+                  styles.dayAbbreviation,
+                  { color: isSelected ? '#fff' : theme.colors.textSecondary }
+                ]}>
+                  {dayAbbreviations[index]}
+                </Text>
+                <Text style={[
+                  styles.dayNumber,
+                  { color: isSelected ? '#fff' : theme.colors.text }
+                ]}>
+                  {day.format('D')}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
+
+  const renderCollapsibleSection = (title, todos, collapsed, setCollapsed) => {
+    if (todos.length === 0) return null;
+
+    return (
+      <View style={styles.sectionContainer}>
+        <TouchableOpacity
+          style={styles.sectionHeader}
+          onPress={() => setCollapsed(!collapsed)}
+        >
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            {title} ({todos.length})
+          </Text>
+          {collapsed ? (
+            <ChevronDown size={20} color={theme.colors.textSecondary} />
+          ) : (
+            <ChevronUp size={20} color={theme.colors.textSecondary} />
+          )}
+        </TouchableOpacity>
+        {!collapsed && (
+          <View style={styles.sectionContent}>
+            {todos.map((todo) => (
+              <TodoListItem
+                key={todo.id}
+                item={todo}
+                onPress={handleTodoPress}
+                onToggleComplete={handleToggleComplete}
+                onEdit={handleEditTodo}
+                showCheckbox={true}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
 
   const renderTodo = ({ item }) => {
     return (
@@ -118,6 +210,8 @@ export default function TodoHomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </View>
+      {renderWeeklyDatePicker()}
+
       <View style={styles.content}>
         {todos.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -140,11 +234,8 @@ export default function TodoHomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         ) : (
-          <FlatList
-            data={todos}
-            renderItem={renderTodo}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={styles.listContainer}
+          <ScrollView
+            style={styles.scrollContainer}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -153,12 +244,15 @@ export default function TodoHomeScreen({ navigation }) {
               />
             }
             showsVerticalScrollIndicator={false}
-            ListFooterComponent={() => (
+          >
+            <View style={styles.listContainer}>
+              {renderCollapsibleSection('Incomplete', incompleteTodos, incompleteCollapsed, setIncompleteCollapsed)}
+              {renderCollapsibleSection('Completed', completedTodos, completedCollapsed, setCompletedCollapsed)}
               <Text style={[styles.pullToRefreshText, { color: theme.colors.textSecondary }]}>
                 pull to refresh
               </Text>
-            )}
-          />
+            </View>
+          </ScrollView>
         )}
       </View>
     </SafeAreaView>
@@ -207,7 +301,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingBottom: 0,
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
   },
   refreshButton: {
     flexDirection: 'row',
@@ -230,5 +324,58 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
     opacity: 0.6,
+  },
+  weekContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  weekScrollContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  dayContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    marginHorizontal: 2,
+    borderRadius: 8,
+    width: 40,
+    height: 56,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  dayAbbreviation: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginBottom: 2,
+    lineHeight: 12,
+  },
+  dayNumber: {
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  sectionContainer: {
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  sectionContent: {
+    paddingTop: 8,
   },
 });

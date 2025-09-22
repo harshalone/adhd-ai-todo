@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, Alert, Share, Modal, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, Sun, Moon, Smartphone, ChevronRight, User, Globe, MessageCircle, Trash2, FileText, Shield, LogOut, Share as ShareIcon } from 'lucide-react-native';
+import { Settings, Sun, Moon, Smartphone, ChevronRight, User, Globe, MessageCircle, Trash2, FileText, Shield, LogOut, Share as ShareIcon, Bell } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
@@ -48,6 +48,11 @@ export default function SettingsScreen({ navigation }) {
   const navigateToPrivacy = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('Privacy');
+  };
+
+  const navigateToNotifications = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('NotificationSettings');
   };
 
   const handleShare = () => {
@@ -157,6 +162,17 @@ export default function SettingsScreen({ navigation }) {
               <Text style={[styles.settingValue, { color: theme.colors.text }]}>{getThemeText()}</Text>
               <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
             </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={navigateToNotifications}
+          >
+            <View style={styles.settingLeft}>
+              <Bell size={20} color={theme.colors.text} />
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>Notifications</Text>
+            </View>
+            <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
           </TouchableOpacity>
 
           <TouchableOpacity
