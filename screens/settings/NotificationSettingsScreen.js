@@ -1,8 +1,8 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { ChevronLeft } from 'lucide-react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import BackButton from '../../components/BackButton';
 import NotificationSettings from '../../components/NotificationSettings';
 
 export default function NotificationSettingsScreen({ navigation }) {
@@ -11,11 +11,8 @@ export default function NotificationSettingsScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ChevronLeft size={39} color={theme.colors.primary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={[styles.title, { color: theme.colors.text }]}>Notifications</Text>
-        <View style={styles.placeholder} />
       </View>
 
       <NotificationSettings />
@@ -29,7 +26,6 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 16,
@@ -37,10 +33,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '600',
-    flex: 1,
-    textAlign: 'center',
-  },
-  placeholder: {
-    width: 39,
+    marginLeft: 12,
   },
 });

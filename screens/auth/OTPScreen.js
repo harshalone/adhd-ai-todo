@@ -51,15 +51,8 @@ export default function OTPScreen({ route, navigation }) {
         // Store authentication data
         setAuthenticated(data.user, data.session);
 
-        Alert.alert('Success', 'Authentication successful!', [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigation will be handled by the main app based on auth state
-              console.log('Authentication successful for:', email);
-            },
-          },
-        ]);
+        // Navigation will be handled by the main app based on auth state
+        console.log('Authentication successful for:', email);
       } else {
         Alert.alert('Error', 'Authentication failed. Please try again.');
       }
@@ -164,7 +157,7 @@ export default function OTPScreen({ route, navigation }) {
               style={[
                 styles.linkText,
                 {
-                  color: resendTimer > 0 ? theme.colors.textSecondary : '#3295c8',
+                  color: resendTimer > 0 ? theme.colors.textSecondary : theme.colors.link,
                 },
               ]}
             >

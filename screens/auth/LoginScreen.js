@@ -38,7 +38,23 @@ export default function LoginScreen({ navigation }) {
       const { error } = await authHelpers.sendOTP(email.trim(), false);
 
       if (error) {
-        Alert.alert('Error', error.message || 'Failed to send OTP. Please try again.');
+        // Check if it's the "no account found" error
+        if (error.message && error.message.includes('Please sign up before logging in')) {
+          Alert.alert(
+            'Account Not Found',
+            error.message,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Sign Up',
+                style: 'default',
+                onPress: () => navigation.navigate('Register')
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Error', error.message || 'Failed to send OTP. Please try again.');
+        }
         return;
       }
 
@@ -113,7 +129,7 @@ export default function LoginScreen({ navigation }) {
                     url: termsOfService
                   })}
                 >
-                  <Text style={[styles.legalLinkText, { color: '#ffffff' }]}>Terms & Conditions</Text>
+                  <Text style={[styles.legalLinkText, { color: theme.colors.link }]}>Terms & Conditions</Text>
                 </TouchableOpacity>
                 <Text style={[styles.linkSeparator, { color: theme.colors.textSecondary }]}> • </Text>
                 <TouchableOpacity
@@ -121,7 +137,7 @@ export default function LoginScreen({ navigation }) {
                     url: privacyPolicy
                   })}
                 >
-                  <Text style={[styles.legalLinkText, { color: '#ffffff' }]}>Privacy Policy</Text>
+                  <Text style={[styles.legalLinkText, { color: theme.colors.link }]}>Privacy Policy</Text>
                 </TouchableOpacity>
               </View>
               <Text style={[styles.agreementText, { color: theme.colors.textSecondary }]}>
@@ -135,7 +151,7 @@ export default function LoginScreen({ navigation }) {
               Don't have an account?{' '}
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={[styles.linkText, { color: '#ffffff' }]}>
+              <Text style={[styles.linkText, { color: theme.colors.link }]}>
                 Sign Up
               </Text>
             </TouchableOpacity>

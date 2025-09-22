@@ -160,7 +160,7 @@ export default function OTPRegistrationScreen({ route, navigation }) {
               style={[
                 styles.linkText,
                 {
-                  color: resendTimer > 0 ? theme.colors.textSecondary : '#3295c8',
+                  color: resendTimer > 0 ? theme.colors.textSecondary : theme.colors.link,
                 },
               ]}
             >

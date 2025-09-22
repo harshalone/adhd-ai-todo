@@ -242,14 +242,44 @@ export default function NotificationSettings() {
           <Text style={[styles.infoTitle, { color: theme.colors.text }]}>
             How Notifications Work
           </Text>
-          <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
-            • Notifications are automatically scheduled when you create todos with alert times{'\n'}
-            • High priority todos show a red indicator 🔴{'\n'}
-            • Medium priority todos show a yellow indicator 🟡{'\n'}
-            • Low priority todos show a green indicator 🟢{'\n'}
-            • Notifications include location and category if set{'\n'}
-            • Completing or deleting todos automatically cancels their notifications
-          </Text>
+          <View style={styles.infoList}>
+            <View style={styles.infoItem}>
+              <View style={[styles.bulletPoint, { backgroundColor: theme.colors.primary }]} />
+              <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
+                Notifications are automatically scheduled when you create todos with alert times
+              </Text>
+            </View>
+            <View style={styles.infoItem}>
+              <View style={[styles.bulletPoint, { backgroundColor: theme.colors.primary }]} />
+              <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
+                High priority todos show a red indicator 🔴
+              </Text>
+            </View>
+            <View style={styles.infoItem}>
+              <View style={[styles.bulletPoint, { backgroundColor: theme.colors.primary }]} />
+              <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
+                Medium priority todos show a yellow indicator 🟡
+              </Text>
+            </View>
+            <View style={styles.infoItem}>
+              <View style={[styles.bulletPoint, { backgroundColor: theme.colors.primary }]} />
+              <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
+                Low priority todos show a green indicator 🟢
+              </Text>
+            </View>
+            <View style={styles.infoItem}>
+              <View style={[styles.bulletPoint, { backgroundColor: theme.colors.primary }]} />
+              <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
+                Notifications include location and category if set
+              </Text>
+            </View>
+            <View style={styles.infoItem}>
+              <View style={[styles.bulletPoint, { backgroundColor: theme.colors.primary }]} />
+              <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
+                Completing or deleting todos automatically cancels their notifications
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
     </ScrollView>
@@ -340,8 +370,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
+  infoList: {
+    gap: 12,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  bulletPoint: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 6,
+    flexShrink: 0,
+  },
   infoText: {
     fontSize: 14,
     lineHeight: 20,
+    flex: 1,
   },
 });

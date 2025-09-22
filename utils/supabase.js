@@ -52,7 +52,15 @@ export const authHelpers = {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle specific error for when user tries to login but account doesn't exist
+        if (error.message && error.message.includes('Signups not allowed for otp')) {
+          const userFriendlyError = new Error('Please sign up before logging in. No account found with this email address.');
+          userFriendlyError.originalError = error;
+          throw userFriendlyError;
+        }
+        throw error;
+      }
       return { data, error: null };
     } catch (error) {
       console.error('Send OTP error:', error);

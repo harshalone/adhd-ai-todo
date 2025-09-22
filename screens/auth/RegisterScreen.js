@@ -123,7 +123,7 @@ export default function RegisterScreen({ navigation }) {
                     url: termsOfService
                   })}
                 >
-                  <Text style={[styles.legalLinkText, { color: '#3295c8' }]}>Terms & Conditions</Text>
+                  <Text style={[styles.legalLinkText, { color: theme.colors.link }]}>Terms & Conditions</Text>
                 </TouchableOpacity>
                 <Text style={[styles.linkSeparator, { color: theme.colors.textSecondary }]}> • </Text>
                 <TouchableOpacity
@@ -131,7 +131,7 @@ export default function RegisterScreen({ navigation }) {
                     url: privacyPolicy
                   })}
                 >
-                  <Text style={[styles.legalLinkText, { color: '#3295c8' }]}>Privacy Policy</Text>
+                  <Text style={[styles.legalLinkText, { color: theme.colors.link }]}>Privacy Policy</Text>
                 </TouchableOpacity>
               </View>
               <Text style={[styles.agreementText, { color: theme.colors.textSecondary }]}>

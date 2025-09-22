@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, CreditCard, ShoppingCart, Tag, Share2, Cloud, Smartphone, Users, Gift, Star } from 'lucide-react-native';
+import { X, CreditCard, ShoppingCart, Tag, Share2, Cloud, Smartphone, Users, Gift, Star, Brain, CheckSquare, Mic, Bell, Heart } from 'lucide-react-native';
 import Svg, { Path, G } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
@@ -30,28 +30,28 @@ export default function OBLandingScreen({ navigation }) {
 
   const features = [
     {
-      icon: CreditCard,
-      title: "Store loyalty cards digitally"
+      icon: Brain,
+      title: "AI-powered task planning"
     },
     {
-      icon: ShoppingCart,
-      title: "Create smart shopping lists"
+      icon: CheckSquare,
+      title: "Smart todo management"
     },
     {
-      icon: Share2,
-      title: "Share with family"
+      icon: Mic,
+      title: "Voice-to-task conversion"
     },
     {
-      icon: Tag,
-      title: "Access exclusive deals"
+      icon: Bell,
+      title: "Intelligent reminders"
     },
     {
       icon: Cloud,
       title: "Sync across devices"
     },
     {
-      icon: Gift,
-      title: "Track rewards and points"
+      icon: Heart,
+      title: "ADHD-friendly design"
     }
   ];
 
@@ -75,7 +75,7 @@ export default function OBLandingScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.colors.text }]}>
-            Welcome to <Text style={{ color: theme.colors.primary }}>Stocard</Text>
+            Welcome to <Text style={{ color: theme.colors.primary }}>AI: Planner</Text>
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.text }]}>
             <Text style={styles.highlightedNumber}> 1.2M </Text> Satisfied Users
@@ -122,10 +122,25 @@ export default function OBLandingScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Design Award Section */}
+        <View style={styles.awardSection}>
+          <View style={styles.awardContainer}>
+            <LaurelBranch style={styles.leftBranch} color="#FFD700" isRight={false} />
+            <View style={styles.awardContent}>
+              <Text style={[styles.awardYear, { color: theme.colors.text }]}>2025</Text>
+              <Text style={[styles.awardTitle, { color: theme.colors.text }]}>Design Awards</Text>
+            </View>
+            <LaurelBranch style={styles.rightBranch} color="#FFD700" isRight={true} />
+          </View>
+          <Text style={[styles.awardSubtext, { color: theme.colors.text }]}>
+            Excellence in User Experience Design
+          </Text>
+        </View>
+
         {/* Social Proof */}
         <View style={styles.socialProof}>
           <Text style={[styles.socialText, { color: theme.colors.text }]}>
-            Join thousands of users who have simplified their shopping experience
+            Join thousands of users who have transformed their productivity with AI-powered planning
           </Text>
         </View>
       </ScrollView>
@@ -138,9 +153,6 @@ export default function OBLandingScreen({ navigation }) {
         >
           <Text style={styles.getStartedText}>GET STARTED</Text>
         </TouchableOpacity>
-        <Text style={[styles.freeText, { color: theme.colors.primary }]}>
-          ✓ Free to use forever
-        </Text>
       </View>
     </SafeAreaView>
   );
@@ -170,7 +182,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 32,
-    marginBottom: 4,
+    marginBottom: 20,
     alignItems: 'center',
   },
   title: {
@@ -247,17 +259,17 @@ const styles = StyleSheet.create({
   ratingSection: {
     paddingHorizontal: 32,
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 24,
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 20,
-    minHeight: 80,
+    minHeight: 70,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -297,6 +309,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.6,
     textAlign: 'center',
+  },
+  awardSection: {
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  awardContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    borderRadius: 24,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    minHeight: 70,
+    shadowColor: '#FFD700',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  awardContent: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  awardYear: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  awardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    opacity: 0.9,
+  },
+  awardSubtext: {
+    fontSize: 14,
+    opacity: 0.7,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   bottomCTA: {
     position: 'absolute',

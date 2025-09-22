@@ -26,6 +26,7 @@ const lightTheme = {
     tabBarBackground: '#FFFFFF',
     tabBarInactive: '#8E8E93',
     orange: '#FF9500',
+    link: '#007AFF',
   },
 };
 
@@ -43,6 +44,7 @@ const darkTheme = {
     tabBarBackground: '#1C1C1E',
     tabBarInactive: '#8E8E93',
     orange: '#FF9F0A',
+    link: '#0A84FF',
   },
 };
 
