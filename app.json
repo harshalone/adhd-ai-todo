@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.Stocard",
+      "bundleIdentifier": "com.aiplanner.com",
       "buildNumber": "16",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -50,6 +50,7 @@
     },
     "updates": {
       "url": "https://u.expo.dev/2e591489-5ee9-449b-aec9-44c2ebfc72ca"
-    }
+    },
+    "owner": "harshalone"
   }
 }

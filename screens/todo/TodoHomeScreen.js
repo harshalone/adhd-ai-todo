@@ -1,4 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, FlatList, RefreshControl, Dimensions, ScrollView } from 'react-native';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, RefreshCw, Mic, ChevronDown, ChevronUp } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -16,7 +18,7 @@ export default function TodoHomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
-  const [selectedDate, setSelectedDate] = useState(moment());
+  const [selectedDate, setSelectedDate] = useState(moment().startOf('day'));
   const [completedCollapsed, setCompletedCollapsed] = useState(false);
   const [incompleteCollapsed, setIncompleteCollapsed] = useState(false);
 
@@ -97,47 +99,72 @@ export default function TodoHomeScreen({ navigation }) {
     return days;
   };
 
-  const completedTodos = todos.filter(todo => todo.completed);
-  const incompleteTodos = todos.filter(todo => !todo.completed);
+  const filteredTodos = todos.filter(todo => {
+    if (!todo.due_date) return false;
+    return moment(todo.due_date).isSame(selectedDate, 'day');
+  });
+
+  const completedTodos = filteredTodos.filter(todo => todo.completed);
+  const incompleteTodos = filteredTodos.filter(todo => !todo.completed);
+
+  const handleWeekChange = useCallback((direction) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (direction === 'prev') {
+      setSelectedDate(selectedDate.clone().subtract(1, 'week'));
+    } else {
+      setSelectedDate(selectedDate.clone().add(1, 'week'));
+    }
+  }, [selectedDate]);
 
   const renderWeeklyDatePicker = () => {
     const weekDays = getWeekDays();
     const dayAbbreviations = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-    return (
-      <View style={styles.weekContainer}>
-        <View style={styles.weekScrollContainer}>
-          {weekDays.map((day, index) => {
-            const isSelected = day.isSame(selectedDate, 'day');
-            const isToday = day.isSame(moment(), 'day');
+    const swipeGesture = Gesture.Pan()
+      .onEnd((event) => {
+        if (event.translationX > 50) {
+          runOnJS(handleWeekChange)('prev');
+        } else if (event.translationX < -50) {
+          runOnJS(handleWeekChange)('next');
+        }
+      });
 
-            return (
-              <TouchableOpacity
-                key={day.format('YYYY-MM-DD')}
-                style={[
-                  styles.dayContainer,
-                  isSelected && { backgroundColor: theme.colors.primary },
-                  isToday && !isSelected && { borderColor: theme.colors.primary }
-                ]}
-                onPress={() => setSelectedDate(day)}
-              >
-                <Text style={[
-                  styles.dayAbbreviation,
-                  { color: isSelected ? '#fff' : theme.colors.textSecondary }
-                ]}>
-                  {dayAbbreviations[index]}
-                </Text>
-                <Text style={[
-                  styles.dayNumber,
-                  { color: isSelected ? '#fff' : theme.colors.text }
-                ]}>
-                  {day.format('D')}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+    return (
+      <GestureDetector gesture={swipeGesture}>
+        <View style={styles.weekContainer}>
+          <View style={styles.weekScrollContainer}>
+            {weekDays.map((day, index) => {
+              const isSelected = day.isSame(selectedDate, 'day');
+              const isToday = day.isSame(moment(), 'day');
+
+              return (
+                <TouchableOpacity
+                  key={day.format('YYYY-MM-DD')}
+                  style={[
+                    styles.dayContainer,
+                    isSelected && { backgroundColor: theme.colors.primary },
+                    isToday && !isSelected && { borderColor: theme.colors.primary }
+                  ]}
+                  onPress={() => setSelectedDate(day)}
+                >
+                  <Text style={[
+                    styles.dayAbbreviation,
+                    { color: isSelected ? '#fff' : theme.colors.textSecondary }
+                  ]}>
+                    {dayAbbreviations[index]}
+                  </Text>
+                  <Text style={[
+                    styles.dayNumber,
+                    { color: isSelected ? '#fff' : theme.colors.text }
+                  ]}>
+                    {day.format('D')}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
-      </View>
+      </GestureDetector>
     );
   };
 
@@ -213,25 +240,41 @@ export default function TodoHomeScreen({ navigation }) {
       {renderWeeklyDatePicker()}
 
       <View style={styles.content}>
-        {todos.length === 0 ? (
+        {filteredTodos.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-              No todos added yet. Tap the + button to add your first todo.
+            <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.surface }]}>
+              <Plus size={48} color={theme.colors.primary} strokeWidth={2} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+              All clear!
             </Text>
-            <TouchableOpacity
-              style={[styles.refreshButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-              onPress={onRefresh}
-              disabled={refreshing}
-            >
-              <RefreshCw
-                size={20}
-                color={theme.colors.primary}
-                style={refreshing ? { transform: [{ rotate: '45deg' }] } : {}}
-              />
-              <Text style={[styles.refreshButtonText, { color: theme.colors.primary }]}>
-                {refreshing ? 'Refreshing...' : 'Refresh'}
-              </Text>
-            </TouchableOpacity>
+            <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+              {selectedDate.isSame(moment(), 'day')
+                ? "You have no tasks for today"
+                : `No tasks for ${selectedDate.format('MMM D')}`}
+            </Text>
+            <View style={styles.emptyActions}>
+              <TouchableOpacity
+                style={[styles.primaryActionButton, { backgroundColor: theme.colors.primary }]}
+                onPress={handleAddTodo}
+              >
+                <Plus size={20} color="#fff" />
+                <Text style={styles.primaryActionText}>Add Task</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.secondaryActionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                onPress={onRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw
+                  size={18}
+                  color={theme.colors.primary}
+                />
+                <Text style={[styles.secondaryActionText, { color: theme.colors.primary }]}>
+                  {refreshing ? 'Refreshing...' : 'Refresh'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <ScrollView
@@ -293,30 +336,62 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 32,
   },
-  emptyText: {
+  emptyIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
     fontSize: 16,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  emptyActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  primaryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+  },
+  primaryActionText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  secondaryActionText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   listContainer: {
     paddingBottom: 0,
     paddingHorizontal: 20,
-  },
-  refreshButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 24,
-  },
-  refreshButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
   },
   pullToRefreshText: {
     fontSize: 10,

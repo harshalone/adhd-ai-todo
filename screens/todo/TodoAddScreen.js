@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { todosService } from '../../services/todosService';
 import useAuthStore from '../../stores/authStore';
 import { ChevronDown, ChevronUp, ChevronLeft, Calendar, Clock, MapPin, Bell, Tag, Plus, X, Save } from 'lucide-react-native';
+import TimePicker from '../../components/TimePicker';
 
 export default function TodoAddScreen({ navigation }) {
   const { theme } = useTheme();
@@ -27,6 +28,9 @@ export default function TodoAddScreen({ navigation }) {
   const [tempYear, setTempYear] = useState(new Date().getFullYear().toString());
   const dayScrollRef = useRef(null);
   const monthScrollRef = useRef(null);
+
+  const [dueTime, setDueTime] = useState(null);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   // Location and notes
   const [location, setLocation] = useState('');
@@ -110,10 +114,10 @@ export default function TodoAddScreen({ navigation }) {
 
   const alertOptions = [
     { label: 'None', value: [] },
-    { label: '5 minutes', value: [5] },
-    { label: '15 minutes', value: [15] },
-    { label: '30 minutes', value: [30] },
-    { label: '1 hour', value: [60] },
+    { label: '5 min', value: [5] },
+    { label: '15 min', value: [15] },
+    { label: '30 min', value: [30] },
+    { label: '1 hr', value: [60] },
     { label: '1 day', value: [1440] }
   ];
 
@@ -203,6 +207,15 @@ export default function TodoAddScreen({ navigation }) {
     });
   };
 
+  const formatTime = (time) => {
+    if (!time) return 'Set time';
+    return time.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   const clearDueDate = () => {
     setDueDate(null);
   };
@@ -228,9 +241,32 @@ export default function TodoAddScreen({ navigation }) {
 
       <ScrollView style={styles.content}>
         <View style={styles.form}>
-          {/* Basic Fields */}
+          {/* Title and Priority */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Title</Text>
+            <View style={styles.titlePriorityRow}>
+              <Text style={[styles.label, { color: theme.colors.text }]}>Title</Text>
+              <View style={styles.compactPriorityContainer}>
+                {priorityOptions.map((option) => {
+                  const isSelected = priority === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[styles.compactPriorityOption, {
+                        backgroundColor: isSelected ? '#ffffff' : 'transparent',
+                      }]}
+                      onPress={() => setPriority(option.value)}
+                    >
+                      <Text style={[styles.compactPriorityText, {
+                        color: option.color,
+                        fontWeight: isSelected ? '700' : '600',
+                      }]}>
+                        {option.shortLabel}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
             <TextInput
               style={[styles.titleInput, {
                 backgroundColor: theme.colors.surface,
@@ -246,42 +282,70 @@ export default function TodoAddScreen({ navigation }) {
             />
           </View>
 
-          {/* Priority */}
+          {/* Due Date */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Priority</Text>
-            <View style={styles.priorityContainer}>
-              {priorityOptions.map((option) => {
-                const isSelected = priority === option.value;
-                return (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[styles.priorityOption, {
-                      backgroundColor: isSelected ? '#ffffff' : 'transparent',
-                      shadowColor: isSelected ? '#000' : 'transparent',
-                      shadowOffset: isSelected ? { width: 0, height: 1 } : { width: 0, height: 0 },
-                      shadowOpacity: isSelected ? 0.1 : 0,
-                      shadowRadius: isSelected ? 2 : 0,
-                      elevation: isSelected ? 2 : 0,
-                    }]}
-                    onPress={() => setPriority(option.value)}
-                  >
-                    <View style={styles.priorityContent}>
-                      <View style={[styles.prioritySquare, { backgroundColor: option.color }]}>
-                        <Text style={styles.prioritySquareText}>
-                          {option.shortLabel}
-                        </Text>
-                      </View>
-                      <Text style={[styles.priorityText, {
-                        color: isSelected ? '#000000' : '#666666',
-                        fontWeight: isSelected ? '600' : '500'
-                      }]}>
-                        {option.label}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <Text style={[styles.label, { color: theme.colors.text }]}>Due Date</Text>
+            <TouchableOpacity
+              style={[styles.dateButton, {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border
+              }]}
+              onPress={() => {
+                if (!dueDate) {
+                  const today = new Date();
+                  setTempDay(today.getDate());
+                  setTempMonth(today.getMonth());
+                  setTempYear(today.getFullYear().toString());
+                } else {
+                  setTempDay(dueDate.getDate());
+                  setTempMonth(dueDate.getMonth());
+                  setTempYear(dueDate.getFullYear().toString());
+                }
+                setShowDatePicker(true);
+              }}
+            >
+              <Calendar size={20} color={theme.colors.primary} />
+              <Text style={[styles.dateText, {
+                color: dueDate ? theme.colors.text : theme.colors.textSecondary
+              }]}>
+                {formatDate(dueDate)}
+              </Text>
+              {dueDate && (
+                <TouchableOpacity
+                  style={styles.clearDateButton}
+                  onPress={clearDueDate}
+                >
+                  <X size={16} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Due Time */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: theme.colors.text }]}>Due Time</Text>
+            <TouchableOpacity
+              style={[styles.dateButton, {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border
+              }]}
+              onPress={() => setShowTimePicker(true)}
+            >
+              <Clock size={20} color={theme.colors.primary} />
+              <Text style={[styles.dateText, {
+                color: dueTime ? theme.colors.text : theme.colors.textSecondary
+              }]}>
+                {formatTime(dueTime)}
+              </Text>
+              {dueTime && (
+                <TouchableOpacity
+                  style={styles.clearDateButton}
+                  onPress={() => setDueTime(null)}
+                >
+                  <X size={16} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
           </View>
 
           {/* Alerts */}
@@ -323,6 +387,45 @@ export default function TodoAddScreen({ navigation }) {
 
             {showAdvancedOptions && (
               <View style={[styles.sectionContent, { backgroundColor: '#ffffff', paddingHorizontal: 0 }]}>
+                {/* Tags */}
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>Tags</Text>
+                  <View style={styles.tagInputContainer}>
+                    <TextInput
+                      style={[styles.tagInput, {
+                        backgroundColor: theme.colors.background,
+                        borderColor: theme.colors.border,
+                        color: theme.colors.text
+                      }]}
+                      value={newTag}
+                      onChangeText={setNewTag}
+                      placeholder="Add tag"
+                      placeholderTextColor={theme.colors.textSecondary}
+                      onSubmitEditing={addTag}
+                      returnKeyType="done"
+                    />
+                    <TouchableOpacity
+                      style={[styles.addTagButton, { backgroundColor: theme.colors.primary }]}
+                      onPress={addTag}
+                    >
+                      <Plus size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {tags.length > 0 && (
+                    <View style={styles.tagsContainer}>
+                      {tags.map((tag) => (
+                        <View key={tag} style={[styles.tagChip, { backgroundColor: theme.colors.primary }]}>
+                          <Text style={styles.tagChipText}>{tag}</Text>
+                          <TouchableOpacity onPress={() => removeTag(tag)}>
+                            <X size={12} color="#fff" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
                 {/* Description */}
                 <View style={styles.fieldGroup}>
                   <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>Description</Text>
@@ -340,45 +443,6 @@ export default function TodoAddScreen({ navigation }) {
                     maxLength={500}
                     textAlignVertical="top"
                   />
-                </View>
-
-                {/* Due Date */}
-                <View style={styles.fieldGroup}>
-                  <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>Due Date</Text>
-                  <TouchableOpacity
-                    style={[styles.dateButton, {
-                      backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.border
-                    }]}
-                    onPress={() => {
-                      if (!dueDate) {
-                        const today = new Date();
-                        setTempDay(today.getDate());
-                        setTempMonth(today.getMonth());
-                        setTempYear(today.getFullYear().toString());
-                      } else {
-                        setTempDay(dueDate.getDate());
-                        setTempMonth(dueDate.getMonth());
-                        setTempYear(dueDate.getFullYear().toString());
-                      }
-                      setShowDatePicker(true);
-                    }}
-                  >
-                    <Calendar size={20} color={theme.colors.primary} />
-                    <Text style={[styles.dateText, {
-                      color: dueDate ? theme.colors.text : theme.colors.textSecondary
-                    }]}>
-                      {formatDate(dueDate)}
-                    </Text>
-                    {dueDate && (
-                      <TouchableOpacity
-                        style={styles.clearDateButton}
-                        onPress={clearDueDate}
-                      >
-                        <X size={16} color={theme.colors.textSecondary} />
-                      </TouchableOpacity>
-                    )}
-                  </TouchableOpacity>
                 </View>
 
                 {/* All Day Toggle */}
@@ -493,45 +557,6 @@ export default function TodoAddScreen({ navigation }) {
                       </TouchableOpacity>
                     ))}
                   </View>
-                </View>
-
-                {/* Tags */}
-                <View style={styles.fieldGroup}>
-                  <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>Tags</Text>
-                  <View style={styles.tagInputContainer}>
-                    <TextInput
-                      style={[styles.tagInput, {
-                        backgroundColor: theme.colors.background,
-                        borderColor: theme.colors.border,
-                        color: theme.colors.text
-                      }]}
-                      value={newTag}
-                      onChangeText={setNewTag}
-                      placeholder="Add tag"
-                      placeholderTextColor={theme.colors.textSecondary}
-                      onSubmitEditing={addTag}
-                      returnKeyType="done"
-                    />
-                    <TouchableOpacity
-                      style={[styles.addTagButton, { backgroundColor: theme.colors.primary }]}
-                      onPress={addTag}
-                    >
-                      <Plus size={16} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-
-                  {tags.length > 0 && (
-                    <View style={styles.tagsContainer}>
-                      {tags.map((tag) => (
-                        <View key={tag} style={[styles.tagChip, { backgroundColor: theme.colors.primary }]}>
-                          <Text style={styles.tagChipText}>{tag}</Text>
-                          <TouchableOpacity onPress={() => removeTag(tag)}>
-                            <X size={12} color="#fff" />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  )}
                 </View>
 
                 {/* Calendar Sync */}
@@ -649,6 +674,17 @@ export default function TodoAddScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      <TimePicker
+        visible={showTimePicker}
+        onClose={() => setShowTimePicker(false)}
+        onConfirm={(time) => {
+          setDueTime(time);
+          setShowTimePicker(false);
+        }}
+        initialTime={dueTime}
+        theme={theme}
+      />
     </SafeAreaView>
   );
 }
@@ -661,7 +697,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 8,
     paddingBottom: 16,
   },
   title: {
@@ -691,6 +727,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  titlePriorityRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  compactPriorityContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#e0e0e0',
+    borderRadius: 12,
+    padding: 3,
+    gap: 3,
+  },
+  compactPriorityOption: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    borderWidth: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  compactPriorityText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   titleInput: {
     borderWidth: 1,
@@ -799,45 +860,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
 
-  // Priority styles
-  priorityContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#e0e0e0',
-    borderRadius: 25,
-    padding: 4,
-  },
-  priorityOption: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  priorityContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  priorityText: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  prioritySquare: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
-  },
-  prioritySquareText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
 
   // Chip styles
   chipContainer: {
@@ -846,14 +868,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: 'center',
   },
   chipText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
   },
 

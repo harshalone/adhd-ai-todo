@@ -68,6 +68,12 @@ export const notificationService = {
       const now = new Date();
       const notificationIds = [];
 
+      // Skip scheduling if the due date is in the past
+      if (dueDate <= now) {
+        console.log(`Skipping notification for todo "${todo.title}" - due date is in the past (${dueDate.toLocaleString()})`);
+        return { notificationIds: [], error: null };
+      }
+
       // Schedule notifications for each alert time
       for (const minutes of todo.alert_minutes) {
         const notificationTime = new Date(dueDate.getTime() - (minutes * 60 * 1000));

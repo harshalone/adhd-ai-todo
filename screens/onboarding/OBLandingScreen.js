@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, CreditCard, ShoppingCart, Tag, Share2, Cloud, Smartphone, Users, Gift, Star, Brain, CheckSquare, Mic, Bell, Heart } from 'lucide-react-native';
+import { CreditCard, ShoppingCart, Tag, Share2, Cloud, Smartphone, Users, Gift, Star, Brain, CheckSquare, Mic, Bell, Heart } from 'lucide-react-native';
 import Svg, { Path, G } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
@@ -55,18 +55,9 @@ export default function OBLandingScreen({ navigation }) {
     }
   ];
 
-  const handleClose = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    navigation.goBack();
-  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Close Button */}
-      <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-        <X size={24} color={theme.colors.text} />
-      </TouchableOpacity>
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -149,7 +140,7 @@ export default function OBLandingScreen({ navigation }) {
       <View style={[styles.bottomCTA, { backgroundColor: theme.colors.background }]}>
         <TouchableOpacity
           style={[styles.getStartedButton, { backgroundColor: theme.colors.primary }]}
-          onPress={() => navigation.navigate('OBSelectCountry')}
+          onPress={() => navigation.navigate('OBAttention')}
         >
           <Text style={styles.getStartedText}>GET STARTED</Text>
         </TouchableOpacity>
@@ -161,17 +152,6 @@ export default function OBLandingScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 60,
-    right: 20,
-    zIndex: 1,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,

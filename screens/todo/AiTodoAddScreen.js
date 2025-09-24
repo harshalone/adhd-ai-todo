@@ -368,15 +368,18 @@ export default function AiTodoAddScreen({ navigation }) {
         const task = parsedTasks[i];
 
         // Convert AI task format to our database format
+        // Create local datetime by parsing in local timezone
+        const createLocalDateTime = (date, time) => {
+          if (!date || !time) return null;
+          const dateTime = new Date(`${date}T${time}:00`);
+          return dateTime.toISOString();
+        };
+
         const todoData = {
           title: task.title,
           priority: task.priority !== undefined ? task.priority : 0, // Use AI priority or default to 0
-          due_date: task.date && task.due_time
-            ? `${task.date}T${task.due_time}:00`
-            : null,
-          start_date: task.date && task.start_time
-            ? `${task.date}T${task.start_time}:00`
-            : null,
+          due_date: createLocalDateTime(task.date, task.due_time),
+          start_date: createLocalDateTime(task.date, task.start_time),
           // Convert single reminder to array format if it exists
           alert_minutes: task.reminder ? [task.reminder] : null,
         };
