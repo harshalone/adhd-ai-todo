@@ -100,12 +100,40 @@ export default function TodoHomeScreen({ navigation }) {
   };
 
   const filteredTodos = todos.filter(todo => {
-    if (!todo.due_date) return false;
-    return moment(todo.due_date).isSame(selectedDate, 'day');
+    // Check if the todo has a start_date that matches the selected date
+    if (todo.start_date) {
+      return moment(todo.start_date, 'YYYY-MM-DD').isSame(selectedDate, 'day');
+    }
+    // Fall back to due_date if no start_date
+    else if (todo.due_date) {
+      return moment(todo.due_date, 'YYYY-MM-DD').isSame(selectedDate, 'day');
+    }
+    return false;
   });
 
-  const completedTodos = filteredTodos.filter(todo => todo.completed);
-  const incompleteTodos = filteredTodos.filter(todo => !todo.completed);
+  // Sort function to order todos by time (earliest first)
+  const sortTodosByTime = (todos) => {
+    return todos.sort((a, b) => {
+      // Get time strings for comparison
+      const timeA = a.start_time || a.end_time || null;
+      const timeB = b.start_time || b.end_time || null;
+
+      // Convert time strings to minutes for comparison
+      const getMinutes = (timeStr) => {
+        if (!timeStr) return 1440; // End of day for tasks without time
+
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        if (isNaN(hours) || isNaN(minutes)) return 1440;
+
+        return hours * 60 + minutes;
+      };
+
+      return getMinutes(timeA) - getMinutes(timeB);
+    });
+  };
+
+  const completedTodos = sortTodosByTime(filteredTodos.filter(todo => todo.completed));
+  const incompleteTodos = sortTodosByTime(filteredTodos.filter(todo => !todo.completed));
 
   const handleWeekChange = useCallback((direction) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

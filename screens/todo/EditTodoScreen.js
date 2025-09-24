@@ -35,6 +35,12 @@ export default function EditTodoScreen({ navigation, route }) {
   const [dueTime, setDueTime] = useState(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
+  // Start and end times
+  const [startTime, setStartTime] = useState(null);
+  const [endTime, setEndTime] = useState(null);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+
   // Location and notes
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
@@ -172,6 +178,8 @@ export default function EditTodoScreen({ navigation, route }) {
         category: category || null,
         tags: tags.length > 0 ? tags : null,
         sync_enabled: syncEnabled,
+        start_time: startTime ? startTime.toISOString() : null,
+        end_time: endTime ? endTime.toISOString() : null,
       };
 
       const { error } = await todosService.updateTodo(todo.id, updates);
@@ -301,6 +309,10 @@ export default function EditTodoScreen({ navigation, route }) {
           setAllDay(fullTodo.all_day || false);
           setDurationMinutes(fullTodo.duration_minutes || 60);
           setSyncEnabled(fullTodo.sync_enabled !== false); // Default to true
+
+          // Handle start and end times
+          setStartTime(fullTodo.start_time ? new Date(fullTodo.start_time) : null);
+          setEndTime(fullTodo.end_time ? new Date(fullTodo.end_time) : null);
         }
       } catch (error) {
         console.error('Error loading todo:', error);
@@ -460,31 +472,64 @@ export default function EditTodoScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
 
-          {/* Due Time */}
+          {/* Start and End Times */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Due Time</Text>
-            <TouchableOpacity
-              style={[styles.dateButton, {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border
-              }]}
-              onPress={() => setShowTimePicker(true)}
-            >
-              <Clock size={20} color={theme.colors.primary} />
-              <Text style={[styles.dateText, {
-                color: dueTime ? theme.colors.text : theme.colors.textSecondary
-              }]}>
-                {dueTime ? dueTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Set time'}
-              </Text>
-              {dueTime && (
+            <Text style={[styles.label, { color: theme.colors.text }]}>Time</Text>
+            <View style={styles.timeRow}>
+              {/* Start Time */}
+              <View style={styles.timeColumn}>
+                <Text style={[styles.timeLabel, { color: theme.colors.textSecondary }]}>Start</Text>
                 <TouchableOpacity
-                  style={styles.clearDateButton}
-                  onPress={() => setDueTime(null)}
+                  style={[styles.timeButton, {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border
+                  }]}
+                  onPress={() => setShowStartTimePicker(true)}
                 >
-                  <X size={16} color={theme.colors.textSecondary} />
+                  <Clock size={18} color={theme.colors.primary} />
+                  <Text style={[styles.timeText, {
+                    color: startTime ? theme.colors.text : theme.colors.textSecondary
+                  }]}>
+                    {startTime ? startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Set time'}
+                  </Text>
+                  {startTime && (
+                    <TouchableOpacity
+                      style={styles.clearTimeButton}
+                      onPress={() => setStartTime(null)}
+                    >
+                      <X size={14} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                  )}
                 </TouchableOpacity>
-              )}
-            </TouchableOpacity>
+              </View>
+
+              {/* End Time */}
+              <View style={styles.timeColumn}>
+                <Text style={[styles.timeLabel, { color: theme.colors.textSecondary }]}>End</Text>
+                <TouchableOpacity
+                  style={[styles.timeButton, {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border
+                  }]}
+                  onPress={() => setShowEndTimePicker(true)}
+                >
+                  <Clock size={18} color={theme.colors.primary} />
+                  <Text style={[styles.timeText, {
+                    color: endTime ? theme.colors.text : theme.colors.textSecondary
+                  }]}>
+                    {endTime ? endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Set time'}
+                  </Text>
+                  {endTime && (
+                    <TouchableOpacity
+                      style={styles.clearTimeButton}
+                      onPress={() => setEndTime(null)}
+                    >
+                      <X size={14} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
 
           {/* Alerts */}
@@ -829,6 +874,28 @@ export default function EditTodoScreen({ navigation, route }) {
           setShowTimePicker(false);
         }}
         initialTime={dueTime}
+        theme={theme}
+      />
+
+      <TimePicker
+        visible={showStartTimePicker}
+        onClose={() => setShowStartTimePicker(false)}
+        onConfirm={(time) => {
+          setStartTime(time);
+          setShowStartTimePicker(false);
+        }}
+        initialTime={startTime}
+        theme={theme}
+      />
+
+      <TimePicker
+        visible={showEndTimePicker}
+        onClose={() => setShowEndTimePicker(false)}
+        onConfirm={(time) => {
+          setEndTime(time);
+          setShowEndTimePicker(false);
+        }}
+        initialTime={endTime}
         theme={theme}
       />
     </SafeAreaView>
@@ -1185,5 +1252,38 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '500',
+  },
+
+  // Time row styles
+  timeRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  timeColumn: {
+    flex: 1,
+  },
+  timeLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  timeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    gap: 8,
+    minHeight: 48,
+  },
+  timeText: {
+    fontSize: 13,
+    flex: 1,
+  },
+  clearTimeButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

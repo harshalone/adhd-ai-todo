@@ -51,6 +51,8 @@ export const todosService = {
           priority: todoData.priority || 0,
           due_date: todoData.due_date || null,
           start_date: todoData.start_date || null,
+          start_time: todoData.start_time || null,
+          end_time: todoData.end_time || null,
           all_day: todoData.all_day || false,
           duration_minutes: todoData.duration_minutes || null,
           location: todoData.location || null,

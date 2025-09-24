@@ -43,13 +43,25 @@ export default function TodoListItem({ item, onPress, onToggleComplete, onEdit, 
   const backgroundColor = theme.colors.surface;
   const opacity = item.completed ? 0.6 : 1;
 
-  // Format date from API response (date + start_time/due_time)
+  // Format date and time from new database schema
   const getDateTimeText = () => {
-    if (item.date && item.start_time) {
-      const dateTime = moment(`${item.date} ${item.start_time}`, 'YYYY-MM-DD HH:mm');
+    // Check for start_date and start_time combination first
+    if (item.start_date && item.start_time) {
+      const dateTime = moment(`${item.start_date} ${item.start_time}`, 'YYYY-MM-DD HH:mm');
       return dateTime.format('MMM D, YYYY • h:mm A');
-    } else if (item.due_date) {
-      return moment(item.due_date).format('MMM D, YYYY • h:mm A');
+    }
+    // Fall back to due_date and start_time if available
+    else if (item.due_date && item.start_time) {
+      const dateTime = moment(`${item.due_date} ${item.start_time}`, 'YYYY-MM-DD HH:mm');
+      return dateTime.format('MMM D, YYYY • h:mm A');
+    }
+    // Fall back to just due_date if no time is available
+    else if (item.due_date) {
+      return moment(item.due_date, 'YYYY-MM-DD').format('MMM D, YYYY');
+    }
+    // Fall back to just start_date if no time is available
+    else if (item.start_date) {
+      return moment(item.start_date, 'YYYY-MM-DD').format('MMM D, YYYY');
     }
     return null;
   };

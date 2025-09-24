@@ -1,14 +1,16 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowRight, Check, Sparkles, Heart, Zap } from 'lucide-react-native';
+import { ArrowRight, Check, Sparkles, Heart, Zap, X } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
 import * as Haptics from 'expo-haptics';
 import BackButton from '../../components/BackButton';
 import { useState } from 'react';
+import useAuthStore from '../../stores/authStore';
 
 export default function OBSubscriptionsScreen({ navigation }) {
   const { theme } = useTheme();
   const [selectedPlan, setSelectedPlan] = useState('year');
+  const { completeOnboarding } = useAuthStore();
 
   const plans = [
     {
@@ -56,7 +58,14 @@ export default function OBSubscriptionsScreen({ navigation }) {
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // TODO: Navigate to payment or next screen
+    // Mark onboarding as complete
+    completeOnboarding();
+  };
+
+  const handleClose = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Mark onboarding as complete
+    completeOnboarding();
   };
 
   return (
@@ -64,6 +73,13 @@ export default function OBSubscriptionsScreen({ navigation }) {
       <View style={styles.header}>
         <BackButton onPress={() => navigation.goBack()} />
         <View style={styles.headerSpacer} />
+        <TouchableOpacity
+          onPress={handleClose}
+          style={styles.closeButton}
+          activeOpacity={0.7}
+        >
+          <X size={24} color={theme.colors.text} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -209,7 +225,13 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   headerSpacer: {
+    flex: 1,
+  },
+  closeButton: {
     width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,

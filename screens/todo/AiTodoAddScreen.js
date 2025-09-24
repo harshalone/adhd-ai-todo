@@ -23,7 +23,6 @@ export default function AiTodoAddScreen({ navigation }) {
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
   const [recordedURI, setRecordedURI] = useState(null);
-  const [base64Audio, setBase64Audio] = useState(null);
   const [audioFileSize, setAudioFileSize] = useState(null);
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [transcribedText, setTranscribedText] = useState('');
@@ -152,9 +151,9 @@ export default function AiTodoAddScreen({ navigation }) {
       setRecordedURI(uri);
       console.log('Recording stopped and stored at:', uri);
 
-      // Convert to base64 and transcribe
+      // Get file size and transcribe audio
       if (uri) {
-        await convertToBase64(uri);
+        await getAudioFileSize(uri);
         await transcribeAudio(uri);
       }
     } catch (error) {
@@ -163,24 +162,17 @@ export default function AiTodoAddScreen({ navigation }) {
     }
   };
 
-  const convertToBase64 = async (uri) => {
+  const getAudioFileSize = async (uri) => {
     try {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      setBase64Audio(base64);
-
-      // Get file size
+      // Get file size for display
       const fileInfo = await FileSystem.getInfoAsync(uri);
       if (fileInfo.exists) {
         const sizeInMB = (fileInfo.size / (1024 * 1024)).toFixed(1);
         setAudioFileSize(`${sizeInMB} MB`);
       }
-
-      console.log('Audio converted to base64, file size:', audioFileSize);
+      console.log('Audio file size:', audioFileSize);
     } catch (error) {
-      console.error('Error converting to base64:', error);
-      Alert.alert('Error', 'Failed to convert audio to base64: ' + error.message);
+      console.error('Error getting file size:', error);
     }
   };
 
@@ -209,11 +201,7 @@ export default function AiTodoAddScreen({ navigation }) {
     const typingInterval = startTypingAnimation();
 
     try {
-      const base64Data = base64Audio || await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      const transcription = await callTranscriptionAPI(base64Data);
+      const transcription = await callTranscriptionAPI(uri);
       setTranscribedText(transcription);
 
     } catch (error) {
@@ -227,24 +215,24 @@ export default function AiTodoAddScreen({ navigation }) {
   };
 
   // Call your backend transcription API
-  const callTranscriptionAPI = async (base64Audio) => {
+  const callTranscriptionAPI = async (audioFileUri) => {
     try {
-        //  '192.168.0.53:3000/api/ai/voice/transcriptions'; 
       const SERVER_URL = await getServerUrl();
 
-      const transcription_url = SERVER_URL + 'api/ai/voice/transcriptions';
+      const transcription_url = SERVER_URL + 'api/ai/voice/transcriptions/v2';
       console.log("transcription_url :", transcription_url);
-      
+
+      // Create FormData to send the audio file directly
+      const formData = new FormData();
+      formData.append('file', {
+        uri: audioFileUri,
+        type: 'audio/m4a',
+        name: 'audio.m4a',
+      });
+
       const response = await fetch(transcription_url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add any authentication headers if needed
-          // 'Authorization': `Bearer ${yourAuthToken}`,
-        },
-        body: JSON.stringify({
-          audioData: base64Audio,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -306,7 +294,45 @@ export default function AiTodoAddScreen({ navigation }) {
       const result = await response.json();
 
       if (result.tasks && Array.isArray(result.tasks)) {
-        setParsedTasks(result.tasks);
+        // Sort tasks by time - early morning first, late day last
+        const sortedTasks = result.tasks.sort((a, b) => {
+          // Get time strings for comparison, checking all possible time fields
+          const timeA = a.start_time || a.due_time || a.time || null;
+          const timeB = b.start_time || b.due_time || b.time || null;
+
+          // Convert time strings (HH:mm) to minutes for easy comparison
+          const getMinutes = (timeStr) => {
+            if (!timeStr) return 1440; // End of day (24:00) for tasks without time
+
+            // Handle different time formats that might come from AI
+            let normalizedTime = timeStr;
+            if (timeStr.includes('AM') || timeStr.includes('PM')) {
+              // Convert 12-hour format to 24-hour format
+              const time12h = timeStr.replace(/\s/g, '');
+              const [time, period] = time12h.split(/(AM|PM)/i);
+              let [hours, minutes = '0'] = time.split(':').map(Number);
+
+              if (period.toUpperCase() === 'PM' && hours !== 12) hours += 12;
+              if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+
+              normalizedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+
+            // Parse HH:mm format
+            const [hours, minutes] = normalizedTime.split(':').map(Number);
+            if (isNaN(hours) || isNaN(minutes)) return 1440;
+
+            return hours * 60 + minutes;
+          };
+
+          const minutesA = getMinutes(timeA);
+          const minutesB = getMinutes(timeB);
+
+          // Ascending order: earlier times first (smaller minutes first)
+          return minutesA - minutesB;
+        });
+
+        setParsedTasks(sortedTasks);
         // Store the AI message for later display
         if (result.message) {
           setAiMessage(result.message);
@@ -367,19 +393,14 @@ export default function AiTodoAddScreen({ navigation }) {
 
         const task = parsedTasks[i];
 
-        // Convert AI task format to our database format
-        // Create local datetime by parsing in local timezone
-        const createLocalDateTime = (date, time) => {
-          if (!date || !time) return null;
-          const dateTime = new Date(`${date}T${time}:00`);
-          return dateTime.toISOString();
-        };
-
         const todoData = {
           title: task.title,
           priority: task.priority !== undefined ? task.priority : 0, // Use AI priority or default to 0
-          due_date: createLocalDateTime(task.date, task.due_time),
-          start_date: createLocalDateTime(task.date, task.start_time),
+          // Store date and time separately as the database expects
+          due_date: task.date || null,
+          start_date: task.date || null,
+          start_time: task.start_time || task.due_time || null, // Use start_time or fall back to due_time
+          end_time: task.end_time || null,
           // Convert single reminder to array format if it exists
           alert_minutes: task.reminder ? [task.reminder] : null,
         };
@@ -422,7 +443,6 @@ export default function AiTodoAddScreen({ navigation }) {
 
   const clearRecording = () => {
     setRecordedURI(null);
-    setBase64Audio(null);
     setAudioFileSize(null);
     setTranscribedText('');
     setTranscriptionError(null);
@@ -647,6 +667,10 @@ export default function AiTodoAddScreen({ navigation }) {
                         ...task,
                         priority: task.priority !== undefined ? task.priority : 0, // Use AI priority
                         completed: false, // Never show tasks as completed during preview/saving
+                        // Transform AI response fields to match TodoListItem expectations
+                        start_date: task.date || task.start_date || null,
+                        due_date: task.date || task.due_date || null,
+                        start_time: task.start_time || task.due_time || null,
                       }}
                       showCheckbox={true}
                       onToggleComplete={() => {}} // No-op for parsed tasks
