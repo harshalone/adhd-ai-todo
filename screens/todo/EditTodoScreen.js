@@ -178,8 +178,8 @@ export default function EditTodoScreen({ navigation, route }) {
         category: category || null,
         tags: tags.length > 0 ? tags : null,
         sync_enabled: syncEnabled,
-        start_time: startTime ? startTime.toISOString() : null,
-        end_time: endTime ? endTime.toISOString() : null,
+        start_time: startTime ? startTime.toTimeString().slice(0, 5) : null,
+        end_time: endTime ? endTime.toTimeString().slice(0, 5) : null,
       };
 
       const { error } = await todosService.updateTodo(todo.id, updates);
@@ -310,9 +310,24 @@ export default function EditTodoScreen({ navigation, route }) {
           setDurationMinutes(fullTodo.duration_minutes || 60);
           setSyncEnabled(fullTodo.sync_enabled !== false); // Default to true
 
-          // Handle start and end times
-          setStartTime(fullTodo.start_time ? new Date(fullTodo.start_time) : null);
-          setEndTime(fullTodo.end_time ? new Date(fullTodo.end_time) : null);
+          // Handle start and end times - convert HH:MM format to Date objects
+          if (fullTodo.start_time && /^\d{2}:\d{2}$/.test(fullTodo.start_time)) {
+            const [hours, minutes] = fullTodo.start_time.split(':');
+            const startTimeDate = new Date();
+            startTimeDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            setStartTime(startTimeDate);
+          } else {
+            setStartTime(null);
+          }
+
+          if (fullTodo.end_time && /^\d{2}:\d{2}$/.test(fullTodo.end_time)) {
+            const [hours, minutes] = fullTodo.end_time.split(':');
+            const endTimeDate = new Date();
+            endTimeDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            setEndTime(endTimeDate);
+          } else {
+            setEndTime(null);
+          }
         }
       } catch (error) {
         console.error('Error loading todo:', error);
