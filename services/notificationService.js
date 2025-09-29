@@ -59,24 +59,50 @@ export const notificationService = {
         throw new Error('Notification permissions not granted');
       }
 
-      // Skip if no alert times or no due date
-      if (!todo.alert_minutes || !Array.isArray(todo.alert_minutes) || !todo.due_date) {
+      // Skip if no alert times
+      if (!todo.alert_minutes || !Array.isArray(todo.alert_minutes)) {
         return { notificationIds: [], error: null };
       }
 
-      const dueDate = new Date(todo.due_date);
+      // Get the proper due date and time combination
+      const dueDateTime = this.getTodoDateTime(todo);
+      if (!dueDateTime) {
+        console.log(`Skipping notification for todo "${todo.title}" - no valid date found`);
+        return { notificationIds: [], error: null };
+      }
+
       const now = new Date();
       const notificationIds = [];
 
-      // Skip scheduling if the due date is in the past
-      if (dueDate <= now) {
-        console.log(`Skipping notification for todo "${todo.title}" - due date is in the past (${dueDate.toLocaleString()})`);
+      // Enhanced date validation - ensure we're not scheduling for past dates
+      const moment = require('moment');
+      const today = moment().startOf('day');
+
+      // Extract the date part from dueDateTime and compare properly
+      const dueDateOnly = moment(dueDateTime).startOf('day');
+
+      // Skip scheduling if the due DATE is before today (not just datetime)
+      if (dueDateOnly.isBefore(today)) {
+        console.log(`🚫 Skipping notification for todo "${todo.title}" - due date ${dueDateOnly.format('YYYY-MM-DD')} is before today ${today.format('YYYY-MM-DD')}`);
         return { notificationIds: [], error: null };
+      }
+
+      // Also skip if the specific due datetime is in the past
+      if (dueDateTime <= now) {
+        console.log(`⏰ Skipping notification for todo "${todo.title}" - due date/time is in the past (${dueDateTime.toLocaleString()})`);
+        return { notificationIds: [], error: null };
+      }
+
+      // Check if notifications are already scheduled for this todo to avoid duplicates
+      const existingNotifications = await this.getExistingNotificationsForTodo(todo.id);
+      if (existingNotifications.length > 0) {
+        console.log(`🔄 Found ${existingNotifications.length} existing notifications for todo "${todo.title}" - skipping duplicate scheduling`);
+        return { notificationIds: existingNotifications.map(n => n.identifier), error: null };
       }
 
       // Schedule notifications for each alert time
       for (const minutes of todo.alert_minutes) {
-        const notificationTime = new Date(dueDate.getTime() - (minutes * 60 * 1000));
+        const notificationTime = new Date(dueDateTime.getTime() - (minutes * 60 * 1000));
 
         // Only schedule if notification time is in the future
         if (notificationTime > now) {
@@ -87,10 +113,13 @@ export const notificationService = {
               data: {
                 todoId: todo.id,
                 alertMinutes: minutes,
-                type: 'todo_reminder'
+                type: 'todo_reminder',
+                scheduledAt: new Date().toISOString(),
+                dueDateTime: dueDateTime.toISOString(),
               },
               sound: true,
               priority: Notifications.AndroidNotificationPriority.HIGH,
+              badge: 1,
             },
             trigger: {
               date: notificationTime,
@@ -98,7 +127,9 @@ export const notificationService = {
           });
 
           notificationIds.push(notificationId);
-          console.log(`Scheduled notification ${notificationId} for todo "${todo.title}" at ${notificationTime.toLocaleString()}`);
+          console.log(`✅ Scheduled notification ${notificationId} for todo "${todo.title}" at ${notificationTime.toLocaleString()} (${minutes} min before due time)`);
+        } else {
+          console.log(`⏭️ Skipped notification for todo "${todo.title}" - ${minutes} min alert time (${notificationTime.toLocaleString()}) is in the past`);
         }
       }
 
@@ -128,6 +159,19 @@ export const notificationService = {
     } catch (error) {
       console.error('Error scheduling notifications for todos:', error);
       return { results: [], error: error.message };
+    }
+  },
+
+  // Get existing notifications for a specific todo
+  async getExistingNotificationsForTodo(todoId) {
+    try {
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      return scheduledNotifications.filter(
+        notification => notification.content.data?.todoId === todoId
+      );
+    } catch (error) {
+      console.error('Error getting existing notifications for todo:', error);
+      return [];
     }
   },
 
@@ -192,37 +236,215 @@ export const notificationService = {
   // Get notification title based on alert timing
   getNotificationTitle(todo, alertMinutes) {
     const priorityEmoji = this.getPriorityEmoji(todo.priority);
+    const timeContext = this.getTimeContext(todo);
 
     if (alertMinutes === 0) {
-      return `${priorityEmoji} Todo Due Now!`;
+      return `${priorityEmoji} ${timeContext} Now!`;
     } else if (alertMinutes < 60) {
-      return `${priorityEmoji} Todo Due in ${alertMinutes} minutes`;
+      return `${priorityEmoji} ${timeContext} in ${alertMinutes} min`;
     } else if (alertMinutes < 1440) {
       const hours = Math.floor(alertMinutes / 60);
-      return `${priorityEmoji} Todo Due in ${hours} hour${hours > 1 ? 's' : ''}`;
+      const remainingMinutes = alertMinutes % 60;
+      const timeStr = remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+      return `${priorityEmoji} ${timeContext} in ${timeStr}`;
     } else {
       const days = Math.floor(alertMinutes / 1440);
-      return `${priorityEmoji} Todo Due in ${days} day${days > 1 ? 's' : ''}`;
+      const remainingHours = Math.floor((alertMinutes % 1440) / 60);
+      const timeStr = remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+      return `${priorityEmoji} ${timeContext} in ${timeStr}`;
     }
+  },
+
+  // Get contextual time-based title
+  getTimeContext(todo) {
+    if (todo.start_time || todo.due_time) {
+      return 'Task Starting';
+    }
+    return 'Task Due';
   },
 
   // Get notification body text
   getNotificationBody(todo, alertMinutes) {
     let body = `"${todo.title}"`;
 
+    // Add time information if available
+    const timeInfo = this.getTimeInfo(todo);
+    if (timeInfo) {
+      body += `\n⏰ ${timeInfo}`;
+    }
+
+    // Add location with smart context
     if (todo.location) {
-      body += `\n📍 ${todo.location}`;
+      const locationEmoji = this.getLocationEmoji(todo.location);
+      body += `\n${locationEmoji} ${todo.location}`;
     }
 
+    // Add category with appropriate emoji
     if (todo.category) {
-      body += `\n🏷️ ${todo.category}`;
+      const categoryEmoji = this.getCategoryEmoji(todo.category);
+      body += `\n${categoryEmoji} ${todo.category}`;
     }
 
+    // Add urgency context for immediate notifications
     if (alertMinutes === 0) {
-      body += '\n⏰ This task is due now!';
+      body += '\n🚨 Action needed now!';
+    } else if (alertMinutes <= 15) {
+      body += '\n⚡ Time to prepare!';
+    }
+
+    // Add estimated duration if available
+    if (todo.duration_minutes) {
+      const duration = this.formatDuration(todo.duration_minutes);
+      body += `\n⌛ Estimated: ${duration}`;
     }
 
     return body;
+  },
+
+  // Get formatted time information
+  getTimeInfo(todo) {
+    const moment = require('moment');
+
+    if (todo.start_time && todo.end_time) {
+      return `${todo.start_time} - ${todo.end_time}`;
+    } else if (todo.start_time) {
+      return `Starts at ${todo.start_time}`;
+    } else if (todo.due_time) {
+      return `Due at ${todo.due_time}`;
+    }
+    return null;
+  },
+
+  // Get smart emoji for locations
+  getLocationEmoji(location) {
+    const loc = location.toLowerCase();
+    if (loc.includes('gym') || loc.includes('fitness')) return '🏋️';
+    if (loc.includes('office') || loc.includes('work')) return '🏢';
+    if (loc.includes('home')) return '🏠';
+    if (loc.includes('store') || loc.includes('shop')) return '🛒';
+    if (loc.includes('school') || loc.includes('university')) return '🎓';
+    if (loc.includes('hospital') || loc.includes('doctor')) return '🏥';
+    if (loc.includes('restaurant') || loc.includes('cafe')) return '🍽️';
+    if (loc.includes('bank')) return '🏦';
+    if (loc.includes('park')) return '🌳';
+    return '📍';
+  },
+
+  // Get smart emoji for categories
+  getCategoryEmoji(category) {
+    const cat = category.toLowerCase();
+    if (cat.includes('work') || cat.includes('job')) return '💼';
+    if (cat.includes('health') || cat.includes('medical')) return '⚕️';
+    if (cat.includes('exercise') || cat.includes('fitness')) return '🏋️';
+    if (cat.includes('study') || cat.includes('education')) return '📚';
+    if (cat.includes('family') || cat.includes('personal')) return '👨‍👩‍👧‍👦';
+    if (cat.includes('shopping')) return '🛒';
+    if (cat.includes('finance') || cat.includes('money')) return '💰';
+    if (cat.includes('travel')) return '✈️';
+    if (cat.includes('home') || cat.includes('house')) return '🏠';
+    return '🏷️';
+  },
+
+  // Format duration in a human-readable way
+  formatDuration(minutes) {
+    if (minutes < 60) {
+      return `${minutes}min`;
+    } else if (minutes < 1440) {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
+    } else {
+      const days = Math.floor(minutes / 1440);
+      const remainingHours = Math.floor((minutes % 1440) / 60);
+      return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+    }
+  },
+
+  // Get the proper date/time for a todo by checking various combinations
+  getTodoDateTime(todo) {
+    const moment = require('moment');
+
+    // Priority order for date/time combinations:
+    // 1. start_date + start_time
+    // 2. due_date + start_time
+    // 3. start_date + due_time (from AI todos)
+    // 4. due_date + due_time (from AI todos)
+    // 5. due_date only (set to end of day for notifications)
+    // 6. start_date only (set to end of day for notifications)
+
+    // Add debug logging to understand what data we're working with
+    console.log(`📅 Processing todo "${todo.title}":`, {
+      start_date: todo.start_date,
+      due_date: todo.due_date,
+      start_time: todo.start_time,
+      due_time: todo.due_time,
+      end_time: todo.end_time
+    });
+
+    if (todo.start_date && todo.start_time) {
+      const dateTime = moment(`${todo.start_date} ${todo.start_time}`, 'YYYY-MM-DD HH:mm', true); // strict parsing
+      if (dateTime.isValid()) {
+        console.log(`✅ Using start_date + start_time: ${dateTime.format()} from database date ${todo.start_date} time ${todo.start_time}`);
+        return dateTime.toDate();
+      } else {
+        console.log(`❌ Invalid start_date + start_time format: ${todo.start_date} ${todo.start_time}`);
+      }
+    }
+
+    if (todo.due_date && todo.start_time) {
+      const dateTime = moment(`${todo.due_date} ${todo.start_time}`, 'YYYY-MM-DD HH:mm', true); // strict parsing
+      if (dateTime.isValid()) {
+        console.log(`✅ Using due_date + start_time: ${dateTime.format()} from database date ${todo.due_date} time ${todo.start_time}`);
+        return dateTime.toDate();
+      } else {
+        console.log(`❌ Invalid due_date + start_time format: ${todo.due_date} ${todo.start_time}`);
+      }
+    }
+
+    // Handle AI-generated todos that might have due_time
+    if (todo.start_date && todo.due_time) {
+      const dateTime = moment(`${todo.start_date} ${todo.due_time}`, 'YYYY-MM-DD HH:mm', true); // strict parsing
+      if (dateTime.isValid()) {
+        console.log(`✅ Using start_date + due_time: ${dateTime.format()} from database date ${todo.start_date} time ${todo.due_time}`);
+        return dateTime.toDate();
+      } else {
+        console.log(`❌ Invalid start_date + due_time format: ${todo.start_date} ${todo.due_time}`);
+      }
+    }
+
+    if (todo.due_date && todo.due_time) {
+      const dateTime = moment(`${todo.due_date} ${todo.due_time}`, 'YYYY-MM-DD HH:mm', true); // strict parsing
+      if (dateTime.isValid()) {
+        console.log(`✅ Using due_date + due_time: ${dateTime.format()} from database date ${todo.due_date} time ${todo.due_time}`);
+        return dateTime.toDate();
+      } else {
+        console.log(`❌ Invalid due_date + due_time format: ${todo.due_date} ${todo.due_time}`);
+      }
+    }
+
+    // Fall back to just date - set to a reasonable time (9 PM) for notifications
+    if (todo.due_date) {
+      const dateTime = moment(todo.due_date, 'YYYY-MM-DD', true).hour(21).minute(0).second(0); // strict parsing
+      if (dateTime.isValid()) {
+        console.log(`✅ Using due_date only (9 PM): ${dateTime.format()} from database date ${todo.due_date}`);
+        return dateTime.toDate();
+      } else {
+        console.log(`❌ Invalid due_date format: ${todo.due_date}`);
+      }
+    }
+
+    if (todo.start_date) {
+      const dateTime = moment(todo.start_date, 'YYYY-MM-DD', true).hour(21).minute(0).second(0); // strict parsing
+      if (dateTime.isValid()) {
+        console.log(`✅ Using start_date only (9 PM): ${dateTime.format()} from database date ${todo.start_date}`);
+        return dateTime.toDate();
+      } else {
+        console.log(`❌ Invalid start_date format: ${todo.start_date}`);
+      }
+    }
+
+    console.log(`❌ No valid date/time found for todo "${todo.title}"`);
+    return null;
   },
 
   // Get emoji based on priority
@@ -264,7 +486,7 @@ export const notificationService = {
         throw new Error('Notification permissions not granted');
       }
 
-      await Notifications.scheduleNotificationAsync({
+      const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: '🧠 ADHD Todo Test',
           body: 'Your notification system is working perfectly!',
@@ -273,10 +495,89 @@ export const notificationService = {
         trigger: { seconds: 1 },
       });
 
-      return { success: true, error: null };
+      console.log(`✅ Test notification scheduled with ID: ${notificationId}`);
+      return { success: true, notificationId, error: null };
     } catch (error) {
-      console.error('Error sending test notification:', error);
+      console.error('❌ Error sending test notification:', error);
       return { success: false, error: error.message };
+    }
+  },
+
+  // Debug: Get detailed notification status
+  async getNotificationDebugInfo() {
+    try {
+      const permissions = await Notifications.getPermissionsAsync();
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+
+      const debugInfo = {
+        permissions: {
+          status: permissions.status,
+          canAskAgain: permissions.canAskAgain,
+          granted: permissions.granted,
+        },
+        scheduledCount: scheduled.length,
+        scheduledNotifications: scheduled.map(notification => ({
+          id: notification.identifier,
+          title: notification.content.title,
+          body: notification.content.body,
+          scheduledTime: notification.trigger.date ? new Date(notification.trigger.date).toLocaleString() : 'Unknown',
+          todoId: notification.content.data?.todoId,
+          alertMinutes: notification.content.data?.alertMinutes,
+          type: notification.content.data?.type,
+        })),
+        groupedByTodo: this.groupNotificationsByTodo(scheduled),
+      };
+
+      console.log('📊 Notification Debug Info:', JSON.stringify(debugInfo, null, 2));
+      return { debugInfo, error: null };
+    } catch (error) {
+      console.error('❌ Error getting debug info:', error);
+      return { debugInfo: null, error: error.message };
+    }
+  },
+
+  // Group notifications by todo for easier debugging
+  groupNotificationsByTodo(notifications) {
+    const grouped = {};
+    notifications.forEach(notification => {
+      const todoId = notification.content.data?.todoId;
+      if (todoId) {
+        if (!grouped[todoId]) {
+          grouped[todoId] = [];
+        }
+        grouped[todoId].push({
+          id: notification.identifier,
+          alertMinutes: notification.content.data?.alertMinutes,
+          scheduledTime: notification.trigger.date ? new Date(notification.trigger.date).toLocaleString() : 'Unknown',
+        });
+      }
+    });
+    return grouped;
+  },
+
+  // Validate and clean up orphaned notifications
+  async validateAndCleanupNotifications() {
+    try {
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const now = new Date();
+      let cleanedCount = 0;
+
+      console.log(`🔍 Validating ${scheduled.length} scheduled notifications...`);
+
+      for (const notification of scheduled) {
+        // Remove notifications scheduled in the past (shouldn't happen but safety net)
+        if (notification.trigger.date && new Date(notification.trigger.date) <= now) {
+          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+          cleanedCount++;
+          console.log(`🗑️ Removed past notification: ${notification.identifier}`);
+        }
+      }
+
+      console.log(`✅ Cleanup complete. Removed ${cleanedCount} outdated notifications.`);
+      return { cleanedCount, error: null };
+    } catch (error) {
+      console.error('❌ Error during notification cleanup:', error);
+      return { cleanedCount: 0, error: error.message };
     }
   },
 
@@ -329,5 +630,64 @@ export const notificationService = {
       console.error('Error cancelling daily reminder:', error);
       return { error: error.message };
     }
+  },
+
+  // Smart suggestion for notification times based on todo context
+  getSuggestedNotificationTimes(todo) {
+    const suggestions = [];
+
+    // Get category-based suggestions
+    if (todo.category) {
+      const cat = todo.category.toLowerCase();
+
+      if (cat.includes('work') || cat.includes('meeting')) {
+        // Work tasks: 15 min, 1 hour before
+        suggestions.push(15, 60);
+      } else if (cat.includes('exercise') || cat.includes('gym')) {
+        // Exercise: 30 min, 2 hours before (time to prepare/change)
+        suggestions.push(30, 120);
+      } else if (cat.includes('appointment') || cat.includes('doctor')) {
+        // Appointments: 30 min, 24 hours before
+        suggestions.push(30, 1440);
+      } else if (cat.includes('travel') || cat.includes('trip')) {
+        // Travel: 1 hour, 1 day before
+        suggestions.push(60, 1440);
+      } else if (cat.includes('shopping')) {
+        // Shopping: 1 hour before
+        suggestions.push(60);
+      }
+    }
+
+    // Get location-based suggestions
+    if (todo.location) {
+      const loc = todo.location.toLowerCase();
+
+      if (loc.includes('gym') || loc.includes('fitness')) {
+        if (!suggestions.includes(30)) suggestions.push(30);
+        if (!suggestions.includes(120)) suggestions.push(120);
+      } else if (loc.includes('office') || loc.includes('work')) {
+        if (!suggestions.includes(15)) suggestions.push(15);
+        if (!suggestions.includes(60)) suggestions.push(60);
+      }
+    }
+
+    // Get priority-based suggestions
+    if (todo.priority === 2) { // High priority
+      if (!suggestions.includes(15)) suggestions.push(15);
+      if (!suggestions.includes(60)) suggestions.push(60);
+      if (!suggestions.includes(1440)) suggestions.push(1440);
+    } else if (todo.priority === 1) { // Medium priority
+      if (!suggestions.includes(30)) suggestions.push(30);
+      if (!suggestions.includes(60)) suggestions.push(60);
+    } else { // Low priority
+      if (!suggestions.includes(60)) suggestions.push(60);
+    }
+
+    // Default suggestions if none were added
+    if (suggestions.length === 0) {
+      suggestions.push(15, 60); // 15 min and 1 hour before
+    }
+
+    return suggestions.sort((a, b) => a - b); // Sort ascending
   }
 };

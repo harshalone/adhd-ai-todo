@@ -125,10 +125,10 @@ export default function OBAiAutomationScreen({ navigation }) {
   }, []);
 
   const countryStats = [
-    { country: "USA", percentage: 89, users: "2400K" },
-    { country: "UAE", percentage: 90, users: "890K" },
-    { country: "China", percentage: 79, users: "3100K" },
-    { country: "UK", percentage: 68, users: "1200K" }
+    { country: "USA", percentage: 89, users: "2400" },
+    { country: "UAE", percentage: 90, users: "890" },
+    { country: "China", percentage: 79, users: "3100" },
+    { country: "UK", percentage: 68, users: "1200" }
   ];
 
   const reviews = [

@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Circle, Svg } from 'react-native-svg';
-import { Clock, Coffee, BookOpen, Dumbbell, Car, Home, MapPin, Calendar, CheckSquare } from 'lucide-react-native';
+import { Clock, Coffee, BookOpen, Dumbbell, Car, Home, MapPin, Calendar, CheckSquare, ChevronLeft, X } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { todosService } from '../services/todosService';
 import TimePicker from '../components/TimePicker';
 import IconPicker from '../components/IconPicker';
@@ -14,6 +14,7 @@ import moment from 'moment';
 
 export default function FocusScreen() {
   const { theme } = useTheme();
+  const navigation = useNavigation();
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [todos, setTodos] = useState([]);
@@ -30,6 +31,7 @@ export default function FocusScreen() {
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showTaskModal, setShowTaskModal] = useState(false);
   const [customIcon, setCustomIcon] = useState(null);
   const [customIconComponent, setCustomIconComponent] = useState(null);
   const [remainingTime, setRemainingTime] = useState(0);
@@ -285,187 +287,156 @@ export default function FocusScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <ChevronLeft size={39} color={theme.colors.primary} />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: theme.colors.text }]}>Focus</Text>
+        <View style={styles.headerSpacer} />
+      </View>
       <ScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Time Pickers Section */}
-        <View style={styles.section}>
-        <View style={[styles.timePickersContainer, { backgroundColor: theme.colors.surface }]}>
+        {/* 1. Task Selection Button */}
+        <View style={styles.taskSection}>
           <TouchableOpacity
-            style={styles.timePicker}
-            onPress={() => !isRunning && setShowStartTimePicker(true)}
-            disabled={isRunning}
-          >
-            <Text style={[styles.timeLabel, { color: theme.colors.textSecondary }]}>Start</Text>
-            <Text style={[styles.timeValue, { color: theme.colors.text, opacity: isRunning ? 0.5 : 1 }]}>
-              {formatTime(startTime)}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.timeSeparator}>
-            <Text style={[styles.separatorText, { color: theme.colors.textSecondary }]}>to</Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.timePicker}
-            onPress={() => !isRunning && setShowEndTimePicker(true)}
-            disabled={isRunning}
-          >
-            <Text style={[styles.timeLabel, { color: theme.colors.textSecondary }]}>End</Text>
-            <Text style={[styles.timeValue, { color: theme.colors.text, opacity: isRunning ? 0.5 : 1 }]}>
-              {formatTime(endTime)}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Todo Selection */}
-        {todos.length > 0 && (
-          <View style={[styles.todoSelectionContainer, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.todoSelectionLabel, { color: theme.colors.textSecondary }]}>Focus on</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.todoScroll}
-              contentContainerStyle={styles.todoScrollContent}
-            >
-              {todos.map((todo) => (
-                <TouchableOpacity
-                  key={todo.id}
-                  style={[
-                    styles.todoItem,
-                    {
-                      backgroundColor: selectedTodo?.id === todo.id ? theme.colors.primary + '20' : theme.colors.background,
-                      borderColor: selectedTodo?.id === todo.id ? theme.colors.primary : theme.colors.border
-                    }
-                  ]}
-                  onPress={() => {
-                    if (!isRunning) {
-                      setSelectedTodo(todo);
-                      calculateDefaultTimes(todo);
-                      resetCustomIcon();
-                    }
-                  }}
-                  disabled={isRunning}
-                >
-                  <Text style={[
-                    styles.todoTitle,
-                    {
-                      color: selectedTodo?.id === todo.id ? theme.colors.primary : theme.colors.text,
-                      opacity: isRunning ? 0.5 : 1
-                    }
-                  ]} numberOfLines={2}>
-                    {todo.title}
-                  </Text>
-                  {todo.start_time && (
-                    <Text style={[styles.todoTime, { color: theme.colors.textSecondary }]}>
-                      {todo.start_time}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-        </View>
-
-        {/* Progress Circle Section */}
-        <View style={styles.section}>
-        <View style={styles.progressContainer}>
-          <View style={styles.svgContainer} pointerEvents="none">
-            <Svg width={radius * 2 + strokeWidth * 2} height={radius * 2 + strokeWidth * 2}>
-              <Circle
-                cx={radius + strokeWidth}
-                cy={radius + strokeWidth}
-                r={radius}
-                stroke={theme.colors.border}
-                strokeWidth={strokeWidth}
-                fill="none"
-              />
-              <Circle
-                cx={radius + strokeWidth}
-                cy={radius + strokeWidth}
-                r={radius}
-                stroke={theme.colors.primary}
-                strokeWidth={strokeWidth}
-                fill="none"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                transform={`rotate(-90 ${radius + strokeWidth} ${radius + strokeWidth})`}
-              />
-            </Svg>
-          </View>
-          <TouchableOpacity
-            style={styles.iconContainer}
-            onPress={() => {
-              console.log('Center icon clicked!', { selectedTodo: !!selectedTodo, isRunning, showIconPicker });
-              if (!isRunning) {
-                console.log('Opening icon picker with state:', {
-                  selectedTodo: selectedTodo?.id,
-                  customIcon,
-                  hasCustomIconComponent: !!customIconComponent
-                });
-                setShowIconPicker(true);
+            style={[
+              styles.taskSelectButton,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+                opacity: isRunning ? 0.5 : 1
               }
-            }}
-            activeOpacity={0.7}
+            ]}
+            onPress={() => !isRunning && setShowTaskModal(true)}
+            disabled={isRunning}
           >
-            {customIconComponent ? (
-              (() => {
-                const CustomIcon = customIconComponent;
-                return <CustomIcon size={48} color={theme.colors.primary} />;
-              })()
-            ) : selectedTodo ? (
-              getIconForTodo(selectedTodo)
-            ) : (
-              <CheckSquare size={48} color={theme.colors.primary} />
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Timer Text - Always Present to Prevent Layout Shift */}
-        <View style={styles.timerTextContainer}>
-          <Text style={[styles.timerText, { color: theme.colors.text }]}>
-            {isRunning && remainingTime > 0 ? formatDuration(remainingTime) : ' '}
-          </Text>
-        </View>
-
-        {/* Selected Todo Info */}
-        {selectedTodo && (
-          <View style={styles.todoInfoContainer}>
-            <Text style={[styles.selectedTodoTitle, { color: theme.colors.text }]} numberOfLines={2}>
-              {selectedTodo.title}
+            <Text style={[styles.taskSelectValue, { color: theme.colors.text }]} numberOfLines={1}>
+              {selectedTodo ? selectedTodo.title : 'Tap to select a task'}
             </Text>
-            {selectedTodo.description && (
-              <Text style={[styles.selectedTodoDescription, { color: theme.colors.textSecondary }]} numberOfLines={3}>
-                {selectedTodo.description}
+            {selectedTodo?.start_time && (
+              <Text style={[styles.taskSelectTime, { color: theme.colors.textSecondary }]}>
+                {selectedTodo.start_time}
               </Text>
             )}
-          </View>
-        )}
+          </TouchableOpacity>
         </View>
 
-        {/* Start Button Section */}
+        {/* 2. Time Pickers Section */}
+        <View style={styles.timerSection}>
+          <View style={[styles.timePickersContainer, { backgroundColor: theme.colors.surface }]}>
+            <TouchableOpacity
+              style={styles.timePicker}
+              onPress={() => !isRunning && setShowStartTimePicker(true)}
+              disabled={isRunning}
+            >
+              <Text style={[styles.timeLabel, { color: theme.colors.textSecondary }]}>Start</Text>
+              <Text style={[styles.timeValue, { color: theme.colors.text, opacity: isRunning ? 0.5 : 1 }]}>
+                {formatTime(startTime)}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.timeSeparator}>
+              <Text style={[styles.separatorText, { color: theme.colors.textSecondary }]}>to</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.timePicker}
+              onPress={() => !isRunning && setShowEndTimePicker(true)}
+              disabled={isRunning}
+            >
+              <Text style={[styles.timeLabel, { color: theme.colors.textSecondary }]}>End</Text>
+              <Text style={[styles.timeValue, { color: theme.colors.text, opacity: isRunning ? 0.5 : 1 }]}>
+                {formatTime(endTime)}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 3. Progress Circle Section */}
+        <View style={styles.progressSection}>
+          <View style={styles.progressContainer}>
+            <View style={styles.svgContainer} pointerEvents="none">
+              <Svg width={radius * 2 + strokeWidth * 2} height={radius * 2 + strokeWidth * 2}>
+                <Circle
+                  cx={radius + strokeWidth}
+                  cy={radius + strokeWidth}
+                  r={radius}
+                  stroke={theme.colors.border}
+                  strokeWidth={strokeWidth}
+                  fill="none"
+                />
+                <Circle
+                  cx={radius + strokeWidth}
+                  cy={radius + strokeWidth}
+                  r={radius}
+                  stroke={theme.colors.primary}
+                  strokeWidth={strokeWidth}
+                  fill="none"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  transform={`rotate(-90 ${radius + strokeWidth} ${radius + strokeWidth})`}
+                />
+              </Svg>
+            </View>
+            <TouchableOpacity
+              style={styles.iconContainer}
+              onPress={() => {
+                console.log('Center icon clicked!', { selectedTodo: !!selectedTodo, isRunning, showIconPicker });
+                if (!isRunning) {
+                  console.log('Opening icon picker with state:', {
+                    selectedTodo: selectedTodo?.id,
+                    customIcon,
+                    hasCustomIconComponent: !!customIconComponent
+                  });
+                  setShowIconPicker(true);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              {customIconComponent ? (
+                (() => {
+                  const CustomIcon = customIconComponent;
+                  return <CustomIcon size={48} color={theme.colors.primary} />;
+                })()
+              ) : selectedTodo ? (
+                getIconForTodo(selectedTodo)
+              ) : (
+                <CheckSquare size={48} color={theme.colors.primary} />
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Timer Text - Always Present to Prevent Layout Shift */}
+          <View style={styles.timerTextContainer}>
+            <Text style={[styles.timerText, { color: theme.colors.text }]}>
+              {isRunning && remainingTime > 0 ? formatDuration(remainingTime) : ' '}
+            </Text>
+          </View>
+        </View>
+
+        {/* 4. Start Button Section */}
         <View style={styles.section}>
-        <TouchableOpacity
-          style={[
-            styles.button,
-            styles.alignedButton,
-            {
-              backgroundColor: theme.colors.primary,
-            }
-          ]}
-          onPress={() => {
-            console.log('Start button clicked!', { selectedTodo: !!selectedTodo, isRunning });
-            handleToggle();
-          }}
-        >
-          <Text style={styles.buttonText}>
-            {isRunning ? 'Stop' : selectedTodo ? 'Start Focus' : 'Start Timer'}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.button,
+              styles.alignedButton,
+              {
+                backgroundColor: theme.colors.primary,
+              }
+            ]}
+            onPress={() => {
+              console.log('Start button clicked!', { selectedTodo: !!selectedTodo, isRunning });
+              handleToggle();
+            }}
+          >
+            <Text style={styles.buttonText}>
+              {isRunning ? 'Stop' : selectedTodo ? 'Start Focus' : 'Start Timer'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -579,6 +550,88 @@ export default function FocusScreen() {
         </View>
       </Modal>
 
+      {/* Task Selection Modal */}
+      <Modal
+        visible={showTaskModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowTaskModal(false)}
+      >
+        <View style={styles.taskModalOverlay}>
+          <View style={[styles.taskModal, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.taskModalHeader}>
+              <TouchableOpacity onPress={() => setShowTaskModal(false)} style={styles.taskCloseButton}>
+                <X size={24} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+              <Text style={[styles.taskModalTitle, { color: theme.colors.text }]}>
+                Select Today's Task
+              </Text>
+              <TouchableOpacity onPress={() => setShowTaskModal(false)}>
+                <Text style={[styles.taskModalDone, { color: theme.colors.primary }]}>Done</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.taskModalContent}
+              contentContainerStyle={styles.taskModalScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {todos.length > 0 ? (
+                todos.map((todo) => (
+                  <TouchableOpacity
+                    key={todo.id}
+                    style={[
+                      styles.taskModalItem,
+                      {
+                        backgroundColor: selectedTodo?.id === todo.id ? theme.colors.primary + '20' : 'transparent',
+                        borderColor: selectedTodo?.id === todo.id ? theme.colors.primary : theme.colors.border
+                      }
+                    ]}
+                    onPress={() => {
+                      setSelectedTodo(todo);
+                      calculateDefaultTimes(todo);
+                      resetCustomIcon();
+                      setShowTaskModal(false);
+                    }}
+                  >
+                    <View style={styles.taskModalItemContent}>
+                      <Text style={[
+                        styles.taskModalItemTitle,
+                        {
+                          color: selectedTodo?.id === todo.id ? theme.colors.primary : theme.colors.text,
+                          fontWeight: selectedTodo?.id === todo.id ? '600' : '400'
+                        }
+                      ]} numberOfLines={2}>
+                        {todo.title}
+                      </Text>
+                      {todo.description && (
+                        <Text style={[styles.taskModalItemDescription, { color: theme.colors.textSecondary }]} numberOfLines={2}>
+                          {todo.description}
+                        </Text>
+                      )}
+                      {todo.start_time && (
+                        <Text style={[styles.taskModalItemTime, { color: theme.colors.textSecondary }]}>
+                          {todo.start_time}
+                        </Text>
+                      )}
+                    </View>
+                    {selectedTodo?.id === todo.id && (
+                      <CheckSquare size={20} color={theme.colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.noTasksContainer}>
+                  <Text style={[styles.noTasksText, { color: theme.colors.textSecondary }]}>
+                    No tasks scheduled for today
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* Confetti Animation - Shows on top of everything when focus session completes */}
       {showConfetti && (
         <Confetti
@@ -599,6 +652,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 39,
+  },
   scrollContainer: {
     flex: 1,
   },
@@ -607,8 +674,23 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   section: {
-    marginBottom: 90,
-    marginTop: 50,
+    marginBottom: 24,
+  },
+  taskSection: {
+    marginBottom: 16,
+    marginTop: 20,
+  },
+  timerSection: {
+    marginTop: 0,
+    marginBottom: 32,
+  },
+  progressSection: {
+    height: 250,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 24,
   },
   topSection: {
     paddingTop: 20,
@@ -653,46 +735,122 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  todoSelectionContainer: {
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginBottom: 16,
-    width: '100%',
-  },
-  todoSelectionLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 12,
-    paddingHorizontal: 20,
-  },
-  todoScroll: {
-    maxHeight: 120,
-  },
-  todoScrollContent: {
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  todoItem: {
+  taskSelectButton: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    minWidth: 120,
-    maxWidth: 200,
+    alignSelf: 'stretch',
+    marginHorizontal: 20,
   },
-  todoTitle: {
-    fontSize: 14,
+  taskSelectValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'left',
+  },
+  taskSelectTime: {
+    fontSize: 12,
+    fontWeight: '400',
+    marginTop: 2,
+    textAlign: 'left',
+  },
+  taskModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 80,
+  },
+  taskModal: {
+    borderRadius: 20,
+    paddingBottom: 20,
+    width: '100%',
+    maxWidth: 400,
+    height: 500,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  taskModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  taskModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  taskModalDone: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  taskCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  taskModalContent: {
+    flex: 1,
+  },
+  taskModalScrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    flexGrow: 1,
+  },
+  taskModalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+    marginHorizontal: 0,
+  },
+  taskModalItemContent: {
+    flex: 1,
+  },
+  taskModalItemTitle: {
+    fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
-  todoTime: {
+  taskModalItemDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  taskModalItemTime: {
     fontSize: 12,
-    fontWeight: '400',
+    fontWeight: '500',
+  },
+  noTasksContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noTasksText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
   progressContainer: {
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
+    flex: 1,
   },
   svgContainer: {
     position: 'absolute',
@@ -718,22 +876,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     minHeight: 22,
-  },
-  todoInfoContainer: {
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    marginTop: 20,
-  },
-  selectedTodoTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  selectedTodoDescription: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
   },
   button: {
     paddingHorizontal: 48,

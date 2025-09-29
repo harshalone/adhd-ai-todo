@@ -1,10 +1,10 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { LaptopMinimal, Settings, Calendar, Focus } from 'lucide-react-native';
+import { ListChecks, Settings, Calendar, Rows3 } from 'lucide-react-native';
 
 import TodoStackNavigator from './TodoStackNavigator';
 import SettingsStackNavigator from './SettingsStackNavigator';
-import TrackScreen from '../screens/TrackScreen';
-import FocusScreen from '../screens/FocusScreen';
+import TrackStackNavigator from './TrackStackNavigator';
+import ListStackNavigator from './ListStackNavigator';
 import { useTheme } from '../context/ThemeContext';
 
 const Tab = createBottomTabNavigator();
@@ -18,12 +18,12 @@ export default function TabNavigator() {
         tabBarIcon: ({ focused, color, size }) => {
           let IconComponent;
 
-          if (route.name === 'Todos') {
-            IconComponent = LaptopMinimal;
+          if (route.name === 'List') {
+            IconComponent = Rows3;
+          } else if (route.name === 'Todos') {
+            IconComponent = ListChecks;
           } else if (route.name === 'Track') {
             IconComponent = Calendar;
-          } else if (route.name === 'Focus') {
-            IconComponent = Focus;
           } else if (route.name === 'Settings') {
             IconComponent = Settings;
           }
@@ -43,9 +43,9 @@ export default function TabNavigator() {
         headerShown: false,
       })}
     >
+      <Tab.Screen name="List" component={ListStackNavigator} />
       <Tab.Screen name="Todos" component={TodoStackNavigator} />
-      <Tab.Screen name="Track" component={TrackScreen} />
-      <Tab.Screen name="Focus" component={FocusScreen} />
+      <Tab.Screen name="Track" component={TrackStackNavigator} />
       <Tab.Screen name="Settings" component={SettingsStackNavigator} />
     </Tab.Navigator>
   );

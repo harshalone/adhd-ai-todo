@@ -1,16 +1,18 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { todosService } from '../services/todosService';
 import { useState, useEffect, useCallback } from 'react';
 import moment from 'moment';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { Focus } from 'lucide-react-native';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function TrackScreen() {
   const { theme } = useTheme();
+  const navigation = useNavigation();
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -142,12 +144,20 @@ export default function TrackScreen() {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: theme.colors.text }]}>Track</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Focus')}
+          style={styles.focusButton}
+        >
+          <Focus size={24} color={theme.colors.primary} />
+        </TouchableOpacity>
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: theme.colors.text }]}>Track</Text>
 
         <View style={styles.trackContainer}>
           <View style={styles.section}>
@@ -227,6 +237,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  focusButton: {
+    padding: 8,
+  },
   scrollView: {
     flex: 1,
   },
@@ -238,7 +258,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 34,
     fontWeight: '700',
-    marginBottom: 24,
+    marginBottom: 0,
   },
   trackContainer: {
     width: '100%',
