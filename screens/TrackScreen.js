@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { todosService } from '../services/todosService';
@@ -153,6 +153,11 @@ export default function TrackScreen() {
           <Focus size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
+      {loading && (
+        <View style={styles.loadingBarContainer}>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+        </View>
+      )}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -269,7 +274,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: 28,
+  },
+  loadingBarContainer: {
+    height: 2,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',

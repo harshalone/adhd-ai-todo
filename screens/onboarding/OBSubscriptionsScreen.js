@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowRight, Check, Sparkles, Heart, Zap, X } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
@@ -6,40 +6,26 @@ import * as Haptics from 'expo-haptics';
 import BackButton from '../../components/BackButton';
 import { useState } from 'react';
 import useAuthStore from '../../stores/authStore';
+import { useSubscriptionContext } from '../../context/SubscriptionContext';
+import { revenueCatService } from '../../services/revenueCatService';
 
 export default function OBSubscriptionsScreen({ navigation }) {
   const { theme } = useTheme();
-  const [selectedPlan, setSelectedPlan] = useState('year');
   const { completeOnboarding } = useAuthStore();
+  const {
+    offerings,
+    loading,
+    initialized,
+    refreshSubscription,
+  } = useSubscriptionContext();
 
-  const plans = [
-    {
-      id: 'year',
-      name: 'Annual',
-      price: '$29.99',
-      period: '/year',
-      pricePerDay: 'Just $0.08/day',
-      popular: true,
-      savings: 'Save 75%',
-      badge: 'BEST VALUE',
-    },
-    {
-      id: 'month',
-      name: 'Monthly',
-      price: '$3.99',
-      period: '/month',
-      pricePerDay: '$0.13/day',
-      popular: false,
-    },
-    {
-      id: 'week',
-      name: 'Weekly',
-      price: '$1.99',
-      period: '/week',
-      pricePerDay: '$0.28/day',
-      popular: false,
-    },
-  ];
+  // Get current offering packages
+  const currentOffering = offerings?.current;
+  const availablePackages = currentOffering?.availablePackages || [];
+
+  // Track selected package - default to first package (usually annual)
+  const [selectedPackageId, setSelectedPackageId] = useState(availablePackages[0]?.identifier || null);
+  const [purchasing, setPurchasing] = useState(false);
 
   const features = [
     { text: 'Unlimited AI-powered task organization', highlight: true },
@@ -51,22 +37,71 @@ export default function OBSubscriptionsScreen({ navigation }) {
     { text: 'Premium support', highlight: false },
   ];
 
-  const handleSelectPlan = (planId) => {
+  const handleSelectPlan = (packageId) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedPlan(planId);
+    setSelectedPackageId(packageId);
   };
 
-  const handleContinue = () => {
+  const handlePurchase = async () => {
+    if (!selectedPackageId || purchasing) return;
+
+    const selectedPackage = availablePackages.find(pkg => pkg.identifier === selectedPackageId);
+    if (!selectedPackage) return;
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Mark onboarding as complete
+    setPurchasing(true);
+
+    try {
+      const result = await revenueCatService.purchasePackage(selectedPackage);
+
+      // Only proceed if purchase was successful
+      if (result && result.customerInfo) {
+        // Refresh subscription status
+        await refreshSubscription();
+
+        // Show success message and complete onboarding
+        Alert.alert(
+          'Welcome to Pro!',
+          'Your subscription has been activated. Enjoy all premium features!',
+          [
+            {
+              text: 'Get Started',
+              onPress: () => {
+                completeOnboarding();
+              }
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      // Only show error alert for real errors, not cancellations
+      if (error.message && !error.message.includes('cancelled')) {
+        Alert.alert('Purchase Failed', error.message || 'Something went wrong. Please try again.');
+      }
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
+  const handleSkip = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Mark onboarding as complete without purchasing
     completeOnboarding();
   };
 
-  const handleClose = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Mark onboarding as complete
-    completeOnboarding();
-  };
+  // Show loading state while initializing
+  if (!initialized || loading) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.text }]}>
+            Loading subscription options...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -74,7 +109,7 @@ export default function OBSubscriptionsScreen({ navigation }) {
         <BackButton onPress={() => navigation.goBack()} />
         <View style={styles.headerSpacer} />
         <TouchableOpacity
-          onPress={handleClose}
+          onPress={handleSkip}
           style={styles.closeButton}
           activeOpacity={0.7}
         >
@@ -107,54 +142,77 @@ export default function OBSubscriptionsScreen({ navigation }) {
         </View>
 
         <View style={styles.plansContainer}>
-          {plans.map((plan, index) => (
-            <TouchableOpacity
-              key={plan.id}
-              style={[
-                styles.planCard,
-                {
-                  backgroundColor: selectedPlan === plan.id ? theme.colors.primary + '10' : theme.colors.surface,
-                  borderColor: selectedPlan === plan.id ? theme.colors.primary : theme.colors.border,
-                  borderWidth: selectedPlan === plan.id ? 3 : 1,
-                  transform: selectedPlan === plan.id ? [{ scale: 1.02 }] : [{ scale: 1 }],
-                }
-              ]}
-              onPress={() => handleSelectPlan(plan.id)}
-            >
-              {plan.popular && (
-                <View style={[styles.popularBadge, { backgroundColor: theme.colors.primary }]}>
-                  <Sparkles size={12} color="#fff" />
-                  <Text style={styles.popularText}>{plan.badge}</Text>
-                </View>
-              )}
+          {availablePackages.length > 0 ? (
+            availablePackages.map((pkg, index) => {
+              // Generate simple title based on package type
+              let simpleTitle = 'Pro';
+              let billingPeriod = '';
+              let isPopular = false;
 
-              <View style={styles.planContent}>
-                <View style={styles.planLeft}>
-                  <Text style={[styles.planName, { color: theme.colors.text }]}>{plan.name}</Text>
-                  <View style={styles.priceRow}>
-                    <Text style={[styles.planPrice, { color: theme.colors.text }]}>{plan.price}</Text>
-                    <Text style={[styles.planPeriod, { color: theme.colors.textSecondary }]}>{plan.period}</Text>
-                  </View>
-                  <Text style={[styles.pricePerDay, { color: theme.colors.textSecondary }]}>{plan.pricePerDay}</Text>
-                  {plan.savings && (
-                    <View style={[styles.savingsBadge, { backgroundColor: '#22C55E' }]}>
-                      <Text style={styles.savingsText}>{plan.savings}</Text>
+              if (pkg.packageType === 'ANNUAL' || pkg.identifier.toLowerCase().includes('year')) {
+                simpleTitle = 'Annual';
+                billingPeriod = '/year';
+                isPopular = true; // Annual is usually the best value
+              } else if (pkg.packageType === 'MONTHLY' || pkg.identifier.toLowerCase().includes('month')) {
+                simpleTitle = 'Monthly';
+                billingPeriod = '/month';
+              } else if (pkg.packageType === 'WEEKLY' || pkg.identifier.toLowerCase().includes('week')) {
+                simpleTitle = 'Weekly';
+                billingPeriod = '/week';
+              }
+
+              const isSelected = selectedPackageId === pkg.identifier;
+
+              return (
+                <TouchableOpacity
+                  key={pkg.identifier}
+                  style={[
+                    styles.planCard,
+                    {
+                      backgroundColor: isSelected ? theme.colors.primary + '10' : theme.colors.surface,
+                      borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+                      borderWidth: isSelected ? 3 : 1,
+                      transform: isSelected ? [{ scale: 1.02 }] : [{ scale: 1 }],
+                    }
+                  ]}
+                  onPress={() => handleSelectPlan(pkg.identifier)}
+                >
+                  {isPopular && (
+                    <View style={[styles.popularBadge, { backgroundColor: theme.colors.primary }]}>
+                      <Sparkles size={12} color="#fff" />
+                      <Text style={styles.popularText}>BEST VALUE</Text>
                     </View>
                   )}
-                </View>
 
-                <View style={[
-                  styles.radioButton,
-                  {
-                    borderColor: selectedPlan === plan.id ? theme.colors.primary : theme.colors.border,
-                    backgroundColor: selectedPlan === plan.id ? theme.colors.primary : 'transparent',
-                  }
-                ]}>
-                  {selectedPlan === plan.id && <Check size={18} color="#fff" strokeWidth={3} />}
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+                  <View style={styles.planContent}>
+                    <View style={styles.planLeft}>
+                      <Text style={[styles.planName, { color: theme.colors.text }]}>{simpleTitle}</Text>
+                      <View style={styles.priceRow}>
+                        <Text style={[styles.planPrice, { color: theme.colors.text }]}>{pkg.product.priceString}</Text>
+                        <Text style={[styles.planPeriod, { color: theme.colors.textSecondary }]}>{billingPeriod}</Text>
+                      </View>
+                    </View>
+
+                    <View style={[
+                      styles.radioButton,
+                      {
+                        borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+                        backgroundColor: isSelected ? theme.colors.primary : 'transparent',
+                      }
+                    ]}>
+                      {isSelected && <Check size={18} color="#fff" strokeWidth={3} />}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          ) : (
+            <View style={[styles.noPlansCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+              <Text style={[styles.noPlansText, { color: theme.colors.textSecondary }]}>
+                No subscription plans are currently available. Please check back later.
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.featuresSection}>
@@ -190,18 +248,33 @@ export default function OBSubscriptionsScreen({ navigation }) {
         borderTopColor: theme.colors.border,
         borderTopWidth: 1,
       }]}>
-        <View style={styles.pricePreview}>
-          <Text style={[styles.pricePreviewText, { color: theme.colors.textSecondary }]}>
-            Free for 3 days, then {plans.find(p => p.id === selectedPlan)?.price}{plans.find(p => p.id === selectedPlan)?.period}
-          </Text>
-        </View>
+        {availablePackages.length > 0 && selectedPackageId && (
+          <View style={styles.pricePreview}>
+            <Text style={[styles.pricePreviewText, { color: theme.colors.textSecondary }]}>
+              {availablePackages.find(p => p.identifier === selectedPackageId)?.product.priceString || ''}
+              {availablePackages.find(p => p.identifier === selectedPackageId)?.packageType === 'ANNUAL' ? '/year' :
+               availablePackages.find(p => p.identifier === selectedPackageId)?.packageType === 'MONTHLY' ? '/month' : '/week'}
+            </Text>
+          </View>
+        )}
         <TouchableOpacity
-          style={[styles.continueButton, { backgroundColor: theme.colors.primary }]}
-          onPress={handleContinue}
+          style={[
+            styles.continueButton,
+            { backgroundColor: theme.colors.primary },
+            purchasing && { opacity: 0.6 }
+          ]}
+          onPress={handlePurchase}
           activeOpacity={0.8}
+          disabled={purchasing || !selectedPackageId}
         >
-          <Text style={styles.continueButtonText}>Begin Your Journey</Text>
-          <ArrowRight size={20} color="#fff" />
+          {purchasing ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Text style={styles.continueButtonText}>Begin Your Journey</Text>
+              <ArrowRight size={20} color="#fff" />
+            </>
+          )}
         </TouchableOpacity>
         <Text style={[styles.termsText, { color: theme.colors.textSecondary }]}>
           By continuing, you agree to our{' '}
@@ -216,6 +289,16 @@ export default function OBSubscriptionsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
   },
   header: {
     flexDirection: 'row',
@@ -469,5 +552,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     lineHeight: 16,
+  },
+  noPlansCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+  },
+  noPlansText: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

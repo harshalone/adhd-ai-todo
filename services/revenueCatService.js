@@ -28,8 +28,8 @@ class RevenueCatService {
     this.listeners.forEach(callback => callback(this.customerInfo));
   }
 
-  // Initialize Revenue Cat data (assumes Purchases.configure() already called)
-  async initialize(userId = null) {
+  // Initialize Revenue Cat data (assumes Purchases.configure() already called with user ID)
+  async initialize() {
     try {
       if (this.isInitialized) {
         console.log('🏪 Revenue Cat already initialized');
@@ -43,10 +43,7 @@ class RevenueCatService {
 
       console.log('🏪 Initializing Revenue Cat data...');
 
-      // Set user ID if provided
-      if (userId) {
-        await this.setUserId(userId);
-      }
+      // User ID is now set during Purchases.configure() in App.js or via auth state changes
 
       // Set up listener for customer info updates
       Purchases.addCustomerInfoUpdateListener((customerInfo) => {

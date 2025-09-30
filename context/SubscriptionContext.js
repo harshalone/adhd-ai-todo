@@ -41,6 +41,7 @@ export const SubscriptionProvider = ({ children }) => {
       console.log('🏪 Initializing subscription context...');
 
       // Purchases.configure() should already be called by now (in App.js)
+      // Note: User ID is also set in App.js based on auth state
       try {
         const initialized = await revenueCatService.initialize();
         if (!initialized) {
@@ -175,6 +176,7 @@ export const SubscriptionProvider = ({ children }) => {
   const value = {
     // State
     isSubscribed,
+    hasActiveSubscription: isSubscribed, // Alias for backwards compatibility
     subscriptionInfo,
     customerInfo,
     offerings,

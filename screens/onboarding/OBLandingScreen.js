@@ -66,10 +66,10 @@ export default function OBLandingScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.colors.text }]}>
-            Welcome to <Text style={{ color: theme.colors.primary }}>ai: Planner</Text>
+            Welcome to <Text style={{ color: theme.colors.primary }}>Ai: Planner</Text>
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.text }]}>
-            <Text style={styles.highlightedNumber}> 1.2M </Text> Satisfied Users
+            <Text style={styles.highlightedNumber}> 10k+ </Text> Satisfied Users
           </Text>
         </View>
 

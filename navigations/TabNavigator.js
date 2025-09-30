@@ -43,8 +43,8 @@ export default function TabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="List" component={ListStackNavigator} />
       <Tab.Screen name="Todos" component={TodoStackNavigator} />
+      <Tab.Screen name="List" component={ListStackNavigator} />
       <Tab.Screen name="Track" component={TrackStackNavigator} />
       <Tab.Screen name="Settings" component={SettingsStackNavigator} />
     </Tab.Navigator>

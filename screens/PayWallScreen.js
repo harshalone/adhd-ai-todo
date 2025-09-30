@@ -136,28 +136,6 @@ export default function PayWallScreen({ navigation, route }) {
           </Text>
         </View>
 
-        {/* Features List */}
-        <View style={styles.featuresSection}>
-          <FeatureItem
-            icon={<Brain size={24} color={theme.colors.primary} />}
-            title="AI Todo Creation"
-            description="Convert voice notes into organized tasks instantly"
-            theme={theme}
-          />
-          <FeatureItem
-            icon={<Zap size={24} color={theme.colors.primary} />}
-            title="Smart Scheduling"
-            description="AI automatically sets times and priorities"
-            theme={theme}
-          />
-          <FeatureItem
-            icon={<Clock size={24} color={theme.colors.primary} />}
-            title="Time Management"
-            description="Get intelligent reminders and time suggestions"
-            theme={theme}
-          />
-        </View>
-
         {/* Subscription Plans */}
         {availablePackages.length > 0 ? (
           <View style={styles.plansSection}>
@@ -240,6 +218,31 @@ export default function PayWallScreen({ navigation, route }) {
                 </Text>
               )}
             </TouchableOpacity>
+
+            {/* Features List */}
+            <View style={styles.featuresSection}>
+              <Text style={[styles.featuresSectionTitle, { color: theme.colors.text }]}>
+                What You'll Get:
+              </Text>
+              <FeatureItem
+                icon={<Brain size={24} color={theme.colors.primary} />}
+                title="AI Todo Creation"
+                description="Convert voice notes into organized tasks instantly"
+                theme={theme}
+              />
+              <FeatureItem
+                icon={<Zap size={24} color={theme.colors.primary} />}
+                title="Smart Scheduling"
+                description="AI automatically sets times and priorities"
+                theme={theme}
+              />
+              <FeatureItem
+                icon={<Clock size={24} color={theme.colors.primary} />}
+                title="Time Management"
+                description="Get intelligent reminders and time suggestions"
+                theme={theme}
+              />
+            </View>
           </View>
         ) : (
           <View style={styles.plansSection}>
@@ -318,7 +321,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   headerSection: {
     alignItems: 'center',
@@ -345,7 +348,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   featuresSection: {
-    marginBottom: 32,
+    marginTop: 32,
+    marginBottom: 0,
+  },
+  featuresSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
   },
   featureItem: {
     flexDirection: 'row',

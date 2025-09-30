@@ -11,12 +11,13 @@ import { notificationService } from './services/notificationService';
 import { revenueCatService } from './services/revenueCatService';
 import Purchases from 'react-native-purchases';
 import { REVENUECAT_PUBLIC_API_KEY } from './utils/constants';
+import useAuthStore from './stores/authStore';
 
 // Configure RevenueCat IMMEDIATELY when app loads (before any component mounts)
 // This must run synchronously at module load time
 let revenueCatConfigured = false;
 
-const configureRevenueCatSync = async () => {
+const configureRevenueCatSync = async (userId = null) => {
   if (revenueCatConfigured) {
     console.log('🏪 Revenue Cat already configured');
     return;
@@ -53,11 +54,24 @@ const configureRevenueCatSync = async () => {
     console.log(`   Key: ${apiKey}`);
     console.log(`   Key length: ${apiKey.length}`);
     console.log(`   Key starts with: ${apiKey.substring(0, 10)}...`);
+    if (userId) {
+      console.log(`   App User ID: ${userId}`);
+    }
 
     try {
-      Purchases.configure({ apiKey });
+      // Configure with optional app user ID
+      const config = { apiKey };
+      if (userId) {
+        config.appUserID = userId;
+      }
+
+      Purchases.configure(config);
       console.log(`\n✅✅✅ SUCCESS! Revenue Cat configured for ${Platform.OS}`);
-      console.log(`✅ Using public API key\n`);
+      console.log(`✅ Using public API key`);
+      if (userId) {
+        console.log(`✅ Configured with user ID: ${userId}`);
+      }
+      console.log('');
       revenueCatConfigured = true;
 
       // Mark the service as configured so it knows SDK is ready
@@ -172,15 +186,38 @@ function AppContent() {
 
 export default function App() {
   const [isRevenueCatReady, setIsRevenueCatReady] = useState(false);
+  const user = useAuthStore(state => state.user);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
 
   useEffect(() => {
     // Configure RevenueCat before rendering SubscriptionProvider
     const init = async () => {
-      await configureRevenueCatSync();
+      // Pass user ID if available during initial configuration
+      const userId = user?.id || null;
+      await configureRevenueCatSync(userId);
       setIsRevenueCatReady(true);
     };
     init();
   }, []);
+
+  // Update RevenueCat user ID when authentication state changes
+  useEffect(() => {
+    if (!isRevenueCatReady) return;
+
+    const updateRevenueCatUser = async () => {
+      if (isAuthenticated && user?.id) {
+        // User logged in - set user ID in RevenueCat
+        console.log('🔄 Updating RevenueCat with user ID:', user.id);
+        await revenueCatService.setUserId(user.id);
+      } else if (!isAuthenticated) {
+        // User logged out - clear user ID in RevenueCat
+        console.log('🔄 Clearing RevenueCat user ID (user logged out)');
+        await revenueCatService.clearUserId();
+      }
+    };
+
+    updateRevenueCatUser();
+  }, [isAuthenticated, user?.id, isRevenueCatReady]);
 
   // Wait for RevenueCat to be configured before rendering SubscriptionProvider
   if (!isRevenueCatReady) {

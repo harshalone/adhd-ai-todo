@@ -154,29 +154,52 @@ export default function SubscriptionsScreen({ navigation }) {
               shadowRadius: 6,
               elevation: 3,
             }]}>
-              {activeSubscriptions.map((entitlement, index) => (
-                <View key={index} style={styles.subscriptionDetail}>
-                  <View style={styles.detailRow}>
-                    <Text style={[styles.subscriptionLabel, { color: theme.colors.textSecondary }]}>
-                      Product
-                    </Text>
-                    <Text style={[styles.subscriptionValue, { color: theme.colors.text }]}>
-                      {entitlement.productIdentifier}
-                    </Text>
-                  </View>
+              {activeSubscriptions.map((entitlement, index) => {
+                // Debug log the entitlement data
+                console.log('Entitlement data:', {
+                  productIdentifier: entitlement.productIdentifier,
+                  expirationDate: entitlement.expirationDate,
+                  latestPurchaseDate: entitlement.latestPurchaseDate,
+                  originalPurchaseDate: entitlement.originalPurchaseDate,
+                  willRenew: entitlement.willRenew,
+                  periodType: entitlement.periodType
+                });
 
-                  {entitlement.expirationDate && (
+                // Generate simple title based on product identifier
+                const productId = entitlement.productIdentifier.toLowerCase();
+                let simpleTitle = 'Pro';
+                if (productId.includes('year') || productId.includes('annual')) {
+                  simpleTitle = 'Pro Yearly';
+                } else if (productId.includes('month')) {
+                  simpleTitle = 'Pro Monthly';
+                } else if (productId.includes('week')) {
+                  simpleTitle = 'Pro Weekly';
+                }
+
+                return (
+                  <View key={index} style={styles.subscriptionDetail}>
                     <View style={styles.detailRow}>
                       <Text style={[styles.subscriptionLabel, { color: theme.colors.textSecondary }]}>
-                        {entitlement.willRenew ? 'Renews On' : 'Expires On'}
+                        Product
                       </Text>
                       <Text style={[styles.subscriptionValue, { color: theme.colors.text }]}>
-                        {new Date(entitlement.expirationDate).toLocaleDateString()}
+                        {simpleTitle}
                       </Text>
                     </View>
-                  )}
-                </View>
-              ))}
+
+                    {entitlement.expirationDate && (
+                      <View style={styles.detailRow}>
+                        <Text style={[styles.subscriptionLabel, { color: theme.colors.textSecondary }]}>
+                          {entitlement.willRenew ? 'Renews On' : 'Expires On'}
+                        </Text>
+                        <Text style={[styles.subscriptionValue, { color: theme.colors.text }]}>
+                          {new Date(entitlement.expirationDate).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           )}
         </View>
