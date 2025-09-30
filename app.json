@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ai: Planner",
-    "slug": "lists-ai",
+    "slug": "aitodo",
     "version": "1.1.1",
     "description": "ADHD Todo, AI Task and Planning Assistant",
     "orientation": "portrait",
