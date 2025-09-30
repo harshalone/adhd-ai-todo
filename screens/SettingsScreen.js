@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, Alert, Share, Modal, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, Sun, Moon, Smartphone, ChevronRight, User, Globe, MessageCircle, Trash2, FileText, Shield, LogOut, Share as ShareIcon, Bell } from 'lucide-react-native';
+import { Settings, Sun, Moon, Smartphone, ChevronRight, User, Globe, MessageCircle, Trash2, FileText, Shield, LogOut, Share as ShareIcon, Bell, CreditCard } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
@@ -55,6 +55,11 @@ export default function SettingsScreen({ navigation }) {
     navigation.navigate('NotificationSettings');
   };
 
+  const navigateToSubscription = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('Subscriptions');
+  };
+
   const handleShare = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowShareModal(true);
@@ -64,8 +69,8 @@ export default function SettingsScreen({ navigation }) {
   const shareApp = async () => {
     try {
       const result = await Share.share({
-        message: `Check out this awesome loyalty card app!\n\nDownload: ${APP_STORE_URL}`,
-        title: 'Stocard - Digital Loyalty Cards'
+        message: `Check out this awesome app!\n\nDownload: ${APP_STORE_URL}`,
+        title: 'Lists'
       });
 
       if (result.action === Share.dismissedAction) {
@@ -146,6 +151,17 @@ export default function SettingsScreen({ navigation }) {
             <View style={styles.settingLeft}>
               <User size={20} color={theme.colors.text} />
               <Text style={[styles.settingLabel, { color: theme.colors.text }]}>Profile</Text>
+            </View>
+            <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={navigateToSubscription}
+          >
+            <View style={styles.settingLeft}>
+              <CreditCard size={20} color={theme.colors.text} />
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>Subscription</Text>
             </View>
             <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
           </TouchableOpacity>

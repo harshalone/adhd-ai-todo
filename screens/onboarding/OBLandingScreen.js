@@ -66,7 +66,7 @@ export default function OBLandingScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.colors.text }]}>
-            Welcome to <Text style={{ color: theme.colors.primary }}>Lists: AI Planner</Text>
+            Welcome to <Text style={{ color: theme.colors.primary }}>ai: Planner</Text>
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.text }]}>
             <Text style={styles.highlightedNumber}> 1.2M </Text> Satisfied Users
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   awardSection: {
     paddingHorizontal: 32,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   awardContainer: {
     flexDirection: 'row',
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    minHeight: 70,
+    minHeight: 50,
     shadowColor: '#FFD700',
     shadowOffset: {
       width: 0,

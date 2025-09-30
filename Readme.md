@@ -10,6 +10,8 @@ eas build -p android
 # submit it 
 eas submit --platform ios
 
+# run expo app on device connected with machine via cable 
+npx expo run:ios --device
 
 # App review information
 iostestingaccount@proton.me
@@ -20,3 +22,6 @@ iostestingaccount@proton.me
 - the app will send an email to you with an OTP
 - use the otp to login into your travel easy account.
 - review the app
+
+premium_lists_month
+Premium Lists Monthly Subscription

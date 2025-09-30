@@ -1,16 +1,14 @@
-import { appMetadataService } from '../services/appMetadataService';
-
 // Supabase Configuration (Static - Required for app initialization)
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZ2lxeG54dXlpZW5jemRwbWx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc2NTA5NjYsImV4cCI6MjA1MzIyNjk2Nn0.HQG38G7RBQ0En4saTB_v8hIY7L03Y0GpyTpO0Mp-9no';
 
 export const SUPABASE_PROJECT_URL = 'https://wggiqxnxuyienczdpmlv.supabase.co';
 
-// Required Constants for app (Static - Required for database queries)
-export const APP_DB_ID = 'STOCARD123';
-export const APP_CURRENT_VERSION = '3.2.3';
+// RevenueCat Configuration (Static - Fallback if database doesn't have the key)
+export const REVENUECAT_PUBLIC_API_KEY = ''; // Fallback public API key
 
-// Dynamic Constants (Fetched from database on app load)
-// These will be updated from app_meta_data table
+// Required Constants for app (Static - Required for database queries)
+export const APP_DB_ID = 'LIST123456';
+export const APP_CURRENT_VERSION = '1.1.0';
 
 // Default fallback values (used until database values are loaded)
 export const DEFAULT_CONSTANTS = {
@@ -23,26 +21,6 @@ export const DEFAULT_CONSTANTS = {
   ONBOARDING_VIDEO_ID: 'CI0pwaRei74',
 };
 
-// Dynamic getters that fetch from database or return defaults
-export const getDynamicConstant = async (key) => {
-  try {
-    const value = await appMetadataService.getValue(key);
-    return value || DEFAULT_CONSTANTS[key];
-  } catch (error) {
-    console.warn(`Failed to get dynamic constant ${key}, using default:`, error);
-    return DEFAULT_CONSTANTS[key];
-  }
-};
-
-// Convenience functions for commonly used constants
-export const getContactUsUrl = () => getDynamicConstant('contact_us_api');
-export const getAppStoreId = () => getDynamicConstant('app_store_id');
-export const getAppStoreUrl = () => getDynamicConstant('app_store_url');
-export const getTermsOfServiceUrl = () => getDynamicConstant('terms_url');
-export const getPrivacyPolicyUrl = () => getDynamicConstant('privacy_url');
-export const getServerUrl = () => getDynamicConstant('SERVER_URL');
-export const getOnboardingVideoId = () => getDynamicConstant('onboarding_video_youtube_id');
-
 // Backward compatibility - these will be removed in future versions
 // For now, they return the default values synchronously
 export const CONTACT_US_API_URL = DEFAULT_CONSTANTS.CONTACT_US_API_URL;
@@ -51,3 +29,10 @@ export const APP_STORE_URL = DEFAULT_CONSTANTS.APP_STORE_URL;
 export const termsOfService = DEFAULT_CONSTANTS.TERMS_OF_SERVICE_URL;
 export const privacyPolicy = DEFAULT_CONSTANTS.PRIVACY_POLICY_URL;
 export const ONBOARDING_VIDEO_ID = DEFAULT_CONSTANTS.ONBOARDING_VIDEO_ID;
+
+// Function to get server URL - returns the default server URL
+export const getServerUrl = async () => {
+  // In the future, this could load from database or async storage
+  // For now, return the default
+  return DEFAULT_CONSTANTS.SERVER_URL;
+};

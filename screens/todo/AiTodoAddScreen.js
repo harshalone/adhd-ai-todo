@@ -127,52 +127,69 @@ export default function AiTodoAddScreen({ navigation }) {
     }
 
     try {
-      console.log('Starting recording...');
+      console.log('=== Starting recording ===');
+      console.log('Permission granted:', permissionGranted);
       // Clear previous transcription
       setTranscribedText('');
       setTranscriptionError(null);
-      
+
       await audioRecorder.prepareToRecordAsync();
+      console.log('Audio recorder prepared');
       await audioRecorder.record();
-      console.log('Recording started');
+      console.log('Recording started successfully');
+      console.log('Recorder state after start:', recorderState);
     } catch (error) {
-      console.error('Failed to start recording:', error);
+      console.error('=== Failed to start recording ===');
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       Alert.alert('Error', 'Failed to start recording: ' + error.message);
     }
   };
 
   const stopRecording = async () => {
     try {
-      console.log('Stopping recording...');
+      console.log('=== Stopping recording ===');
       await audioRecorder.stop();
-      
+
       // Get the recording URI
       const uri = audioRecorder.uri;
       setRecordedURI(uri);
       console.log('Recording stopped and stored at:', uri);
+      console.log('Audio recorder state:', recorderState);
 
       // Get file size and transcribe audio
       if (uri) {
+        console.log('URI exists, proceeding with file size and transcription');
         await getAudioFileSize(uri);
         await transcribeAudio(uri);
+      } else {
+        console.error('No URI available after recording stopped');
+        Alert.alert('Error', 'Recording URI not available');
       }
     } catch (error) {
-      console.error('Error stopping recording:', error);
+      console.error('=== Error stopping recording ===');
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       Alert.alert('Error', 'Failed to stop recording: ' + error.message);
     }
   };
 
   const getAudioFileSize = async (uri) => {
     try {
+      console.log('Getting file info for URI:', uri);
       // Get file size for display
       const fileInfo = await FileSystem.getInfoAsync(uri);
+      console.log('File info:', fileInfo);
       if (fileInfo.exists) {
         const sizeInMB = (fileInfo.size / (1024 * 1024)).toFixed(1);
         setAudioFileSize(`${sizeInMB} MB`);
+        console.log('Audio file size:', `${sizeInMB} MB`);
+      } else {
+        console.warn('File does not exist at URI:', uri);
       }
-      console.log('Audio file size:', audioFileSize);
     } catch (error) {
       console.error('Error getting file size:', error);
+      console.error('Error stack:', error.stack);
     }
   };
 
@@ -194,6 +211,8 @@ export default function AiTodoAddScreen({ navigation }) {
   };
 
   const transcribeAudio = async (uri) => {
+    console.log('=== Starting transcription process ===');
+    console.log('URI to transcribe:', uri);
     setIsTranscribing(true);
     setTranscriptionError(null);
 
@@ -202,25 +221,42 @@ export default function AiTodoAddScreen({ navigation }) {
 
     try {
       const transcription = await callTranscriptionAPI(uri);
+      console.log('Transcription received:', transcription);
       setTranscribedText(transcription);
 
     } catch (error) {
-      console.error('Error transcribing audio:', error);
+      console.error('=== Error transcribing audio ===');
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      console.error('Error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       setTranscriptionError('Failed to transcribe audio. Please try again.');
       Alert.alert('Transcription Error', 'Failed to transcribe audio: ' + error.message);
     } finally {
       clearInterval(typingInterval);
       setIsTranscribing(false);
+      console.log('=== Transcription process ended ===');
     }
   };
 
   // Call your backend transcription API
   const callTranscriptionAPI = async (audioFileUri) => {
     try {
+      console.log('=== Calling Transcription API ===');
       const SERVER_URL = await getServerUrl();
+      console.log('Server URL:', SERVER_URL);
 
       const transcription_url = SERVER_URL + 'api/ai/voice/transcriptions/v2';
-      console.log("transcription_url :", transcription_url);
+      console.log('Transcription URL:', transcription_url);
+
+      // Check if file exists before uploading
+      const fileInfo = await FileSystem.getInfoAsync(audioFileUri);
+      console.log('File exists:', fileInfo.exists);
+      console.log('File size:', fileInfo.size);
+      console.log('File URI:', audioFileUri);
+
+      if (!fileInfo.exists) {
+        throw new Error('Audio file does not exist at URI: ' + audioFileUri);
+      }
 
       // Create FormData to send the audio file directly
       const formData = new FormData();
@@ -230,22 +266,37 @@ export default function AiTodoAddScreen({ navigation }) {
         name: 'audio.m4a',
       });
 
+      console.log('FormData prepared, sending request...');
+
       const response = await fetch(transcription_url, {
         method: 'POST',
         body: formData,
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('API Response:', JSON.stringify(result, null, 2));
 
       // API returns the transcription in the 'text' field
+      if (!result.text) {
+        console.warn('No text field in response, full result:', result);
+      }
+
       return result.text || '';
-      
+
     } catch (error) {
-      console.error('Transcription API error:', error);
+      console.error('=== Transcription API error ===');
+      console.error('Error type:', error.constructor.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       throw new Error(`Failed to transcribe audio: ${error.message}`);
     }
   };
@@ -483,7 +534,16 @@ export default function AiTodoAddScreen({ navigation }) {
         {/* Main Blue Container - Collapsible */}
         {isBlueContainerCollapsed ? (
           <TouchableOpacity
-            style={[styles.collapsedContainer, { backgroundColor: theme.colors.primary }]}
+            style={[styles.collapsedContainer, {
+              backgroundColor: theme.colors.primary,
+              shadowColor: theme.colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+              borderWidth: 2,
+              borderColor: theme.colors.primary + '40',
+            }]}
             onPress={() => setIsBlueContainerCollapsed(false)}
           >
             <View style={styles.collapsedContent}>
@@ -497,7 +557,16 @@ export default function AiTodoAddScreen({ navigation }) {
             <ChevronDown size={20} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
         ) : (
-          <View style={[styles.mainContainer, { backgroundColor: theme.colors.primary }]}>
+          <View style={[styles.mainContainer, {
+            backgroundColor: theme.colors.primary,
+            shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+            borderWidth: 2,
+            borderColor: theme.colors.primary + '40',
+          }]}>
             <TouchableOpacity
               style={styles.mainHeaderContainer}
               onPress={() => setIsBlueContainerCollapsed(true)}

@@ -51,6 +51,9 @@ class AppMetadataService {
           ONBOARDING_VIDEO_ID: data.onboarding_video_youtube_id,
           VERSION: data.version,
           UPDATED_AT: data.updated_at,
+          // RevenueCat configuration (public API key works for both iOS and Android)
+          revenue_cat_public_api_key: data.revenue_cat_public_api_key,
+          revenue_cat_secret_key: data.revenue_cat_secret_key,
         };
 
         console.log('App metadata loaded successfully:', this.metadata);

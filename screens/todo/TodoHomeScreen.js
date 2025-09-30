@@ -11,9 +11,11 @@ import { useState, useEffect, useCallback } from 'react';
 import moment from 'moment';
 import CheckVersion from '../../components/CheckVersion';
 import TodoListItem from '../../components/TodoListItem';
+import { useSubscriptionContext } from '../../context/SubscriptionContext';
 
 export default function TodoHomeScreen({ navigation }) {
   const { theme } = useTheme();
+  const { hasActiveSubscription } = useSubscriptionContext();
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -65,7 +67,11 @@ export default function TodoHomeScreen({ navigation }) {
   };
 
   const handleVoiceInput = () => {
-    navigation.navigate('AiTodoAdd');
+    if (hasActiveSubscription) {
+      navigation.navigate('AiTodoAdd');
+    } else {
+      navigation.navigate('PayWall', { destination: 'AiTodoAdd' });
+    }
   };
 
   const handleTodoPress = async (todo) => {
@@ -252,10 +258,21 @@ export default function TodoHomeScreen({ navigation }) {
         <View style={styles.headerRight}>
           <CheckVersion />
           <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}
+            style={[styles.micButton, {
+              backgroundColor: theme.colors.surface,
+              borderWidth: 2,
+              borderColor: theme.colors.primary,
+              shadowColor: theme.colors.primary,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 4,
+            }]}
             onPress={handleVoiceInput}
           >
-            <Mic size={24} color={theme.colors.text} />
+            <View style={[styles.micIconWrapper, { backgroundColor: theme.colors.primary + '15' }]}>
+              <Mic size={22} color={theme.colors.primary} strokeWidth={2.5} />
+            </View>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
@@ -354,6 +371,21 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  micButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  micIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },

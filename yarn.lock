@@ -15,7 +15,7 @@
     "@ai-sdk/provider" "2.0.0"
     "@ai-sdk/provider-utils" "3.0.9"
 
-"@ai-sdk/provider-utils@3.0.9", "@ai-sdk/provider-utils@^3.0.0-beta.5":
+"@ai-sdk/provider-utils@3.0.9":
   version "3.0.9"
   resolved "https://registry.yarnpkg.com/@ai-sdk/provider-utils/-/provider-utils-3.0.9.tgz#ac35a11eaafb5943a6c1bb024b4d2fdda6a8a0a3"
   integrity sha512-Pm571x5efqaI4hf9yW4KsVlDBDme8++UepZRnq+kqVBWWjgvGhQlzU8glaFq0YJEB9kkxZHbRRyVeHoV2sRYaQ==
@@ -24,7 +24,7 @@
     "@standard-schema/spec" "^1.0.0"
     eventsource-parser "^3.0.5"
 
-"@ai-sdk/provider@2.0.0", "@ai-sdk/provider@^2.0.0-beta.1":
+"@ai-sdk/provider@2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@ai-sdk/provider/-/provider-2.0.0.tgz#b853c739d523b33675bc74b6c506b2c690bc602b"
   integrity sha512-6o7Y2SeO9vFKB8lArHXehNuusnpddKPk7xqL7T2/b+OvXMRIXUO1rR4wcv1hAFUAT9avGZshty3Wlua/XA7TvA==
@@ -1311,15 +1311,6 @@
   resolved "https://registry.yarnpkg.com/@pkgjs/parseargs/-/parseargs-0.11.0.tgz#a77ea742fab25775145434eb1d2328cf5013ac33"
   integrity sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==
 
-"@react-native-ai/apple@^0.9.0":
-  version "0.9.0"
-  resolved "https://registry.yarnpkg.com/@react-native-ai/apple/-/apple-0.9.0.tgz#7beb5797bb37500506c99431e51d184e0fefae5e"
-  integrity sha512-ZDYDj+3rJPxUUJYrr47GeQ0f4Zk4/Ht1bfVC43K6K43Yj05KE9PT5xYQdUADr+el7ySCVnH13EY2WcmmSWUhEQ==
-  dependencies:
-    "@ai-sdk/provider" "^2.0.0-beta.1"
-    "@ai-sdk/provider-utils" "^3.0.0-beta.5"
-    zod "^4.0.0"
-
 "@react-native-async-storage/async-storage@^2.2.0":
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/@react-native-async-storage/async-storage/-/async-storage-2.2.0.tgz#a3aa565253e46286655560172f4e366e8969f5ad"
@@ -1517,6 +1508,23 @@
   dependencies:
     "@react-navigation/elements" "^2.6.4"
     color "^4.2.3"
+
+"@revenuecat/purchases-js-hybrid-mappings@17.8.0":
+  version "17.8.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js-hybrid-mappings/-/purchases-js-hybrid-mappings-17.8.0.tgz#bc1c12ca5440b12f885ced931659c2909d548e1e"
+  integrity sha512-OPuyZS8TIhd/Ja9/pnzpz2zjb8LJQr5TBZRAhrBaEG2q3mnkAaNiFSrDLB0kwD2VZ6EWEyAk1G8vDyjplwFPBw==
+  dependencies:
+    "@revenuecat/purchases-js" "1.14.0"
+
+"@revenuecat/purchases-js@1.14.0":
+  version "1.14.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js/-/purchases-js-1.14.0.tgz#df4af8d894f94a02fd31cebce0a57651f467d7aa"
+  integrity sha512-SotJ9MznBZoq91nSxLl1Oqw42k6A3JU0d73/WFbppv1IG770Q8KhuAUo1SgZC62ERCuCHme5fEdER1ZI4x8y7A==
+
+"@revenuecat/purchases-typescript-internal@17.8.0":
+  version "17.8.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-typescript-internal/-/purchases-typescript-internal-17.8.0.tgz#6c8a944841696f2bb3a050b8245446f37c8a7390"
+  integrity sha512-XbLxxHWTnT5MEFC5hW+h8kiusPWNXmqnYgxtCeTNTn6OEyBMH8Y1cr8n7AVS6CDrjH16kUd71IOeqFkPSNqiBQ==
 
 "@shopify/flash-list@2.0.2":
   version "2.0.2"
@@ -4603,6 +4611,21 @@ react-native-is-edge-to-edge@^1.2.1:
   resolved "https://registry.yarnpkg.com/react-native-is-edge-to-edge/-/react-native-is-edge-to-edge-1.2.1.tgz#64e10851abd9d176cbf2b40562f751622bde3358"
   integrity sha512-FLbPWl/MyYQWz+KwqOZsSyj2JmLKglHatd3xLZWskXOpRaio4LfEDEz8E/A6uD8QoTHW6Aobw1jbEwK7KMgR7Q==
 
+react-native-purchases-ui@^9.5.1:
+  version "9.5.1"
+  resolved "https://registry.yarnpkg.com/react-native-purchases-ui/-/react-native-purchases-ui-9.5.1.tgz#722891e48edc3f460b2090bfc3b803c7a09f17f0"
+  integrity sha512-yPScxJ0IKRiVKvaZ5D88702YUlhYsk+p9DHYN8PackLvt0ZGaCCuDMQIVC6ur5sB9VflYDLf3UcCW4xh9fLUUw==
+  dependencies:
+    "@revenuecat/purchases-typescript-internal" "17.8.0"
+
+react-native-purchases@^9.5.1:
+  version "9.5.1"
+  resolved "https://registry.yarnpkg.com/react-native-purchases/-/react-native-purchases-9.5.1.tgz#caee195f240327bffec606353a181a4ec8a2bfdb"
+  integrity sha512-kZNNn4WFASYuPJBqK0wYfHMO3lzYF7MT+znZkGwoWpvYsRafzZpz/WcT+zbumrr9zDTL7EX66CgpBrtQRVYTxA==
+  dependencies:
+    "@revenuecat/purchases-js-hybrid-mappings" "17.8.0"
+    "@revenuecat/purchases-typescript-internal" "17.8.0"
+
 react-native-reanimated@^4.1.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/react-native-reanimated/-/react-native-reanimated-4.1.0.tgz#dd0a2495b14fa344d7f482131ecae79110fa59cd"
@@ -5697,11 +5720,6 @@ yocto-queue@^0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
-
-zod@^4.0.0:
-  version "4.1.11"
-  resolved "https://registry.yarnpkg.com/zod/-/zod-4.1.11.tgz#4aab62f76cfd45e6c6166519ba31b2ea019f75f5"
-  integrity sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg==
 
 zustand@^5.0.8:
   version "5.0.8"

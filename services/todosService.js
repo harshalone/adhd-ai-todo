@@ -211,32 +211,41 @@ export const todosService = {
       if (error) throw error;
 
       if (todos && todos.length > 0) {
-        // Filter for incomplete todos and also filter out todos from past dates
+        // Filter for incomplete todos - only include TODAY's todos (not past, not tomorrow or later)
+        const moment = require('moment');
+        const today = moment().startOf('day');
+        const tomorrow = moment().add(1, 'day').startOf('day');
+
         const incompleteTodos = todos.filter(todo => {
           if (todo.completed) return false;
 
-          // Additional date validation - ensure todo is not from a past date
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
           // Check both due_date and start_date with proper YYYY-MM-DD format parsing
+          // Only include if the date is TODAY (not past, not tomorrow or later)
           if (todo.due_date) {
-            // Use moment for consistent date parsing from YYYY-MM-DD format
-            const moment = require('moment');
             const dueDate = moment(todo.due_date, 'YYYY-MM-DD', true); // strict parsing
-            if (dueDate.isValid() && dueDate.isBefore(moment().startOf('day'))) {
-              console.log(`⏭️ Skipping todo "${todo.title}" - due_date ${todo.due_date} is in the past`);
-              return false;
+            if (dueDate.isValid()) {
+              if (dueDate.isBefore(today)) {
+                console.log(`⏭️ Skipping todo "${todo.title}" - due_date ${todo.due_date} is in the past`);
+                return false;
+              }
+              if (dueDate.isSameOrAfter(tomorrow)) {
+                console.log(`⏭️ Skipping todo "${todo.title}" - due_date ${todo.due_date} is tomorrow or later`);
+                return false;
+              }
             }
           }
 
           if (todo.start_date) {
-            // Use moment for consistent date parsing from YYYY-MM-DD format
-            const moment = require('moment');
             const startDate = moment(todo.start_date, 'YYYY-MM-DD', true); // strict parsing
-            if (startDate.isValid() && startDate.isBefore(moment().startOf('day'))) {
-              console.log(`⏭️ Skipping todo "${todo.title}" - start_date ${todo.start_date} is in the past`);
-              return false;
+            if (startDate.isValid()) {
+              if (startDate.isBefore(today)) {
+                console.log(`⏭️ Skipping todo "${todo.title}" - start_date ${todo.start_date} is in the past`);
+                return false;
+              }
+              if (startDate.isSameOrAfter(tomorrow)) {
+                console.log(`⏭️ Skipping todo "${todo.title}" - start_date ${todo.start_date} is tomorrow or later`);
+                return false;
+              }
             }
           }
 

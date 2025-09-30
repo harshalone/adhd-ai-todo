@@ -74,16 +74,23 @@ export const notificationService = {
       const now = new Date();
       const notificationIds = [];
 
-      // Enhanced date validation - ensure we're not scheduling for past dates
+      // Enhanced date validation - only notify for TODAY's todos
       const moment = require('moment');
       const today = moment().startOf('day');
+      const tomorrow = moment().add(1, 'day').startOf('day');
 
       // Extract the date part from dueDateTime and compare properly
       const dueDateOnly = moment(dueDateTime).startOf('day');
 
-      // Skip scheduling if the due DATE is before today (not just datetime)
+      // Skip scheduling if the due DATE is before today (past dates)
       if (dueDateOnly.isBefore(today)) {
         console.log(`🚫 Skipping notification for todo "${todo.title}" - due date ${dueDateOnly.format('YYYY-MM-DD')} is before today ${today.format('YYYY-MM-DD')}`);
+        return { notificationIds: [], error: null };
+      }
+
+      // Skip scheduling if the due DATE is tomorrow or later (future dates)
+      if (dueDateOnly.isSameOrAfter(tomorrow)) {
+        console.log(`🚫 Skipping notification for todo "${todo.title}" - due date ${dueDateOnly.format('YYYY-MM-DD')} is tomorrow or later (not today ${today.format('YYYY-MM-DD')})`);
         return { notificationIds: [], error: null };
       }
 

@@ -7,16 +7,13 @@ import { Plus, List, UserStar, Rows3, Download } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../utils/supabase';
 import useAuthStore from '../stores/authStore';
-import useShoppingStore from '../stores/shoppingStore';
 
 export default function ListHomeScreen({ navigation }) {
   const { theme } = useTheme();
   const { user } = useAuthStore();
-  const { getLastOpenedList, isLastOpenedListRecent } = useShoppingStore();
   const [shoppingLists, setShoppingLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [hasAutoRedirected, setHasAutoRedirected] = useState(false);
   const [importModalVisible, setImportModalVisible] = useState(false);
   const [importListId, setImportListId] = useState('');
   const [importLoading, setImportLoading] = useState(false);
@@ -60,7 +57,7 @@ export default function ListHomeScreen({ navigation }) {
       }
 
       // Check if user already has this list
-      const { data: existingList, error: existingError } = await supabase
+      const { data: existingList } = await supabase
         .from('users_shopping_lists')
         .select('id')
         .eq('user_uid', user.id)
@@ -120,39 +117,6 @@ export default function ListHomeScreen({ navigation }) {
       setLoading(false);
     }
   }, [user]);
-
-  // Check for auto-redirect only once when component mounts and lists are loaded
-  useEffect(() => {
-    if (!hasAutoRedirected && !loading && shoppingLists.length > 0 && user) {
-      console.log('ShoppingScreen: Checking for auto-redirect');
-
-      const lastOpenedList = getLastOpenedList();
-      console.log('ShoppingScreen: Last opened list:', lastOpenedList);
-
-      if (lastOpenedList && isLastOpenedListRecent()) {
-        // Check if the last opened list still exists in user's lists
-        const listExists = shoppingLists.some(list =>
-          list.id === lastOpenedList.listId
-        );
-
-        if (listExists) {
-          console.log('ShoppingScreen: Auto-redirecting to last opened list:', lastOpenedList.listName);
-          setHasAutoRedirected(true);
-          // Navigate to the last opened list
-          navigation.navigate('ListItems', {
-            listId: lastOpenedList.listId,
-            listName: lastOpenedList.listName
-          });
-        } else {
-          console.log('ShoppingScreen: Last opened list no longer exists, staying on shopping screen');
-          setHasAutoRedirected(true);
-        }
-      } else {
-        console.log('ShoppingScreen: No recent last opened list found');
-        setHasAutoRedirected(true);
-      }
-    }
-  }, [hasAutoRedirected, loading, shoppingLists, user, getLastOpenedList, isLastOpenedListRecent, navigation]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
