@@ -1,3 +1,4 @@
+import React from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
@@ -18,9 +19,20 @@ export default function SubscriptionsScreen({ navigation }) {
     offerings,
     loading,
     initialized,
+    checkSubscription,
     refreshSubscription,
+    refreshOfferings,
     getActiveSubscriptions
   } = useSubscriptionContext();
+
+  // Lazy load subscription and offerings when screen opens
+  React.useEffect(() => {
+    const loadData = async () => {
+      await checkSubscription(); // Check subscription status
+      await refreshOfferings(); // Load offerings
+    };
+    loadData();
+  }, [checkSubscription, refreshOfferings]);
 
   // Get active subscriptions
   const activeSubscriptions = getActiveSubscriptions();

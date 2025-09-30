@@ -8,7 +8,7 @@ const useSettingsStore = create(
   persist(
     (set, get) => ({
       // Theme settings
-      themeMode: 'automatic', // 'light', 'dark', 'automatic'
+      themeMode: 'light', // 'light', 'dark', 'automatic' - default to light until user changes
 
       // Profile settings
       profile: {
@@ -118,7 +118,7 @@ const useSettingsStore = create(
 
       // Reset all settings
       resetSettings: () => set({
-        themeMode: 'automatic',
+        themeMode: 'light', // Default to light theme
         profile: { firstName: '', lastName: '', email: 'user@example.com', avatar: null },
         country: { name: 'United States', code: 'US' },
         notifications: { push: true, email: true, sms: false },

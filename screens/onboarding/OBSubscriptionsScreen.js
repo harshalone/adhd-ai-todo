@@ -4,7 +4,7 @@ import { ArrowRight, Check, Sparkles, Heart, Zap, X } from 'lucide-react-native'
 import { useTheme } from '../../context/ThemeContext';
 import * as Haptics from 'expo-haptics';
 import BackButton from '../../components/BackButton';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useAuthStore from '../../stores/authStore';
 import { useSubscriptionContext } from '../../context/SubscriptionContext';
 import { revenueCatService } from '../../services/revenueCatService';
@@ -17,7 +17,17 @@ export default function OBSubscriptionsScreen({ navigation }) {
     loading,
     initialized,
     refreshSubscription,
+    refreshOfferings,
   } = useSubscriptionContext();
+
+  // Lazy load offerings when screen opens
+  useEffect(() => {
+    const loadData = async () => {
+      console.log('🛍️ OBSubscriptionsScreen: Loading offerings...');
+      await refreshOfferings();
+    };
+    loadData();
+  }, [refreshOfferings]);
 
   // Get current offering packages
   const currentOffering = offerings?.current;
@@ -26,6 +36,13 @@ export default function OBSubscriptionsScreen({ navigation }) {
   // Track selected package - default to first package (usually annual)
   const [selectedPackageId, setSelectedPackageId] = useState(availablePackages[0]?.identifier || null);
   const [purchasing, setPurchasing] = useState(false);
+
+  // Update selected package when packages load
+  useEffect(() => {
+    if (availablePackages.length > 0 && !selectedPackageId) {
+      setSelectedPackageId(availablePackages[0].identifier);
+    }
+  }, [availablePackages, selectedPackageId]);
 
   const features = [
     { text: 'Unlimited AI-powered task organization', highlight: true },
@@ -89,8 +106,8 @@ export default function OBSubscriptionsScreen({ navigation }) {
     completeOnboarding();
   };
 
-  // Show loading state while initializing
-  if (!initialized || loading) {
+  // Show loading state while loading offerings
+  if (loading && !offerings) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>

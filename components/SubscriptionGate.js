@@ -10,10 +10,21 @@ export const SubscriptionGate = ({
   entitlementId = null,
   showLoader = true
 }) => {
-  const { isSubscribed, hasEntitlement, loading } = useSubscriptionContext();
+  const { isSubscribed, hasEntitlement, loading, checkSubscription } = useSubscriptionContext();
   const { theme } = useTheme();
+  const [checking, setChecking] = React.useState(false);
 
-  if (loading && showLoader) {
+  // Lazy check subscription when component mounts
+  React.useEffect(() => {
+    const checkIfNeeded = async () => {
+      setChecking(true);
+      await checkSubscription(); // Will use cache if available
+      setChecking(false);
+    };
+    checkIfNeeded();
+  }, [checkSubscription]);
+
+  if ((loading || checking) && showLoader) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -50,10 +61,21 @@ export const SubscriptionGate = ({
 
 // Component that shows subscription status
 export const SubscriptionStatus = ({ showDetails = true }) => {
-  const { isSubscribed, subscriptionInfo, loading } = useSubscriptionContext();
+  const { isSubscribed, subscriptionInfo, loading, checkSubscription } = useSubscriptionContext();
   const { theme } = useTheme();
+  const [checking, setChecking] = React.useState(false);
 
-  if (loading) {
+  // Lazy check subscription when component mounts
+  React.useEffect(() => {
+    const checkIfNeeded = async () => {
+      setChecking(true);
+      await checkSubscription();
+      setChecking(false);
+    };
+    checkIfNeeded();
+  }, [checkSubscription]);
+
+  if (loading || checking) {
     return (
       <View style={styles.statusContainer}>
         <ActivityIndicator size="small" color={theme.colors.primary} />

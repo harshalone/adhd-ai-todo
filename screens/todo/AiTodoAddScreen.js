@@ -245,7 +245,9 @@ export default function AiTodoAddScreen({ navigation }) {
       const SERVER_URL = await getServerUrl();
       console.log('Server URL:', SERVER_URL);
 
-      const transcription_url = SERVER_URL + 'api/ai/voice/transcriptions/v2';
+      // Ensure proper URL concatenation (handle trailing slash)
+      const baseUrl = SERVER_URL.endsWith('/') ? SERVER_URL : SERVER_URL + '/';
+      const transcription_url = baseUrl + 'api/ai/voice/transcriptions/v2';
       console.log('Transcription URL:', transcription_url);
 
       // Check if file exists before uploading
@@ -314,7 +316,9 @@ export default function AiTodoAddScreen({ navigation }) {
 
     try {
       const SERVER_URL = await getServerUrl();
-      const todoUrl = SERVER_URL + 'api/ai/todo';
+      // Ensure proper URL concatenation (handle trailing slash)
+      const baseUrl = SERVER_URL.endsWith('/') ? SERVER_URL : SERVER_URL + '/';
+      const todoUrl = baseUrl + 'api/ai/todo';
 
       // Get current time from user's phone
       const currentTime = new Date();

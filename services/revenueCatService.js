@@ -9,9 +9,71 @@ class RevenueCatService {
     this.customerInfo = null;
     this.offerings = null;
     this.listeners = new Set();
+    this.configuring = false; // Prevent concurrent configuration attempts
   }
 
-  // Mark SDK as configured (called from App.js after Purchases.configure())
+  // Configure SDK lazily (only when first needed)
+  async ensureConfigured() {
+    if (this.isConfigured) {
+      return true;
+    }
+
+    // Prevent concurrent configuration
+    if (this.configuring) {
+      console.log('⏳ SDK configuration already in progress...');
+      // Wait for configuration to complete
+      while (this.configuring) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return this.isConfigured;
+    }
+
+    this.configuring = true;
+
+    try {
+      console.log('🏪 Lazy configuring RevenueCat SDK...');
+
+      // Import what we need
+      const { Platform } = require('react-native');
+      const Purchases = require('react-native-purchases').default;
+      const { appMetadataService } = require('./appMetadataService');
+
+      // Get API key from metadata
+      await appMetadataService.fetchMetadata();
+      const metadata = await appMetadataService.getMetadata();
+
+      const apiKey = metadata?.revenue_cat_public_api_key?.trim();
+
+      if (!apiKey || apiKey.length === 0) {
+        console.error('❌ No Revenue Cat API key available');
+        this.configuring = false;
+        return false;
+      }
+
+      console.log('🔑 Configuring RevenueCat SDK for', Platform.OS);
+
+      // Configure SDK with minimal logging (no debug in production)
+      if (__DEV__) {
+        // Even in dev, use INFO instead of DEBUG to reduce noise
+        Purchases.setLogLevel(Purchases.LOG_LEVEL.INFO);
+      }
+
+      Purchases.configure({ apiKey });
+
+      this.isConfigured = true;
+      console.log('✅ RevenueCat SDK configured successfully');
+
+      this.configuring = false;
+      return true;
+
+    } catch (error) {
+      console.error('❌ Failed to configure RevenueCat SDK:', error);
+      this.configuring = false;
+      return false;
+    }
+  }
+
+  // Mark SDK as configured (backward compatibility)
   markAsConfigured() {
     this.isConfigured = true;
     console.log('✅ RevenueCat service marked as configured');
@@ -28,7 +90,7 @@ class RevenueCatService {
     this.listeners.forEach(callback => callback(this.customerInfo));
   }
 
-  // Initialize Revenue Cat data (assumes Purchases.configure() already called with user ID)
+  // Initialize Revenue Cat data (lazy - configures SDK if needed)
   async initialize() {
     try {
       if (this.isInitialized) {
@@ -36,21 +98,14 @@ class RevenueCatService {
         return true;
       }
 
-      if (!this.isSDKConfigured()) {
-        console.log('⏭️ SDK not configured yet, skipping full initialization');
+      // Ensure SDK is configured first (lazy configuration)
+      const configured = await this.ensureConfigured();
+      if (!configured) {
+        console.log('⏭️ SDK configuration failed, skipping initialization');
         return false;
       }
 
       console.log('🏪 Initializing Revenue Cat data...');
-
-      // User ID is now set during Purchases.configure() in App.js or via auth state changes
-
-      // Set up listener for customer info updates
-      Purchases.addCustomerInfoUpdateListener((customerInfo) => {
-        console.log('📊 Customer info updated');
-        this.customerInfo = customerInfo;
-        this.notifyListeners();
-      });
 
       // Get initial customer info
       await this.refreshCustomerInfo();
@@ -89,8 +144,10 @@ class RevenueCatService {
   // Refresh customer info from Revenue Cat
   async refreshCustomerInfo() {
     try {
-      if (!this.isSDKConfigured()) {
-        console.log('⏭️ SDK not configured yet, skipping customer info refresh (this is expected during startup)');
+      // Ensure SDK is configured
+      const configured = await this.ensureConfigured();
+      if (!configured) {
+        console.log('⏭️ SDK not configured, skipping customer info refresh');
         return null;
       }
 
@@ -109,8 +166,10 @@ class RevenueCatService {
   // Load available offerings from Revenue Cat
   async loadOfferings() {
     try {
-      if (!this.isSDKConfigured()) {
-        console.log('⏭️ SDK not configured yet, skipping offerings load (this is expected during startup)');
+      // Ensure SDK is configured
+      const configured = await this.ensureConfigured();
+      if (!configured) {
+        console.log('⏭️ SDK not configured, skipping offerings load');
         return null;
       }
 

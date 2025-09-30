@@ -15,7 +15,7 @@ import { useSubscriptionContext } from '../../context/SubscriptionContext';
 
 export default function TodoHomeScreen({ navigation }) {
   const { theme } = useTheme();
-  const { hasActiveSubscription } = useSubscriptionContext();
+  const { hasActiveSubscription, checkSubscription } = useSubscriptionContext();
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -66,8 +66,11 @@ export default function TodoHomeScreen({ navigation }) {
     navigation.navigate('TodoAdd');
   };
 
-  const handleVoiceInput = () => {
-    if (hasActiveSubscription) {
+  const handleVoiceInput = async () => {
+    // Check subscription status lazily when user clicks voice button
+    const isSubscribed = await checkSubscription();
+
+    if (isSubscribed) {
       navigation.navigate('AiTodoAdd');
     } else {
       navigation.navigate('PayWall', { destination: 'AiTodoAdd' });

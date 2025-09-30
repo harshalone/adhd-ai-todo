@@ -137,10 +137,7 @@ function AppContent() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Configure RevenueCat first (before context tries to use it)
-        await configureRevenueCatSync();
-
-        // Initialize notifications
+        // Initialize notifications only (RevenueCat will be lazy loaded when needed)
         await initializeNotifications('startup');
       } catch (error) {
         console.error('❌ Failed to initialize app:', error);
@@ -185,44 +182,9 @@ function AppContent() {
 }
 
 export default function App() {
-  const [isRevenueCatReady, setIsRevenueCatReady] = useState(false);
-  const user = useAuthStore(state => state.user);
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-
-  useEffect(() => {
-    // Configure RevenueCat before rendering SubscriptionProvider
-    const init = async () => {
-      // Pass user ID if available during initial configuration
-      const userId = user?.id || null;
-      await configureRevenueCatSync(userId);
-      setIsRevenueCatReady(true);
-    };
-    init();
-  }, []);
-
-  // Update RevenueCat user ID when authentication state changes
-  useEffect(() => {
-    if (!isRevenueCatReady) return;
-
-    const updateRevenueCatUser = async () => {
-      if (isAuthenticated && user?.id) {
-        // User logged in - set user ID in RevenueCat
-        console.log('🔄 Updating RevenueCat with user ID:', user.id);
-        await revenueCatService.setUserId(user.id);
-      } else if (!isAuthenticated) {
-        // User logged out - clear user ID in RevenueCat
-        console.log('🔄 Clearing RevenueCat user ID (user logged out)');
-        await revenueCatService.clearUserId();
-      }
-    };
-
-    updateRevenueCatUser();
-  }, [isAuthenticated, user?.id, isRevenueCatReady]);
-
-  // Wait for RevenueCat to be configured before rendering SubscriptionProvider
-  if (!isRevenueCatReady) {
-    return null; // Or a loading screen
-  }
+  // DO NOT configure RevenueCat on app startup
+  // It will be configured lazily when user first needs subscription features
+  // This prevents automatic receipt syncing and API calls on every app launch
 
   return (
     <SafeAreaProvider>
