@@ -105,7 +105,7 @@ export default function RegisterScreen({ navigation }) {
             <TouchableOpacity
               style={[
                 styles.button,
-                { backgroundColor: '#f26e5f' },
+                { backgroundColor: theme.colors.primary },
                 loading && styles.buttonDisabled,
               ]}
               onPress={handleSendOTP}

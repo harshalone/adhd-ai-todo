@@ -111,7 +111,7 @@ export default function LoginScreen({ navigation }) {
             <TouchableOpacity
               style={[
                 styles.button,
-                { backgroundColor: '#f26e5f' },
+                { backgroundColor: theme.colors.primary },
                 loading && styles.buttonDisabled,
               ]}
               onPress={handleSendOTP}

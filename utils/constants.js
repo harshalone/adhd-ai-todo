@@ -1,3 +1,6 @@
+// Development flag
+export const IS_DEVELOPMENT = false; // Set to false for production
+
 // Supabase Configuration (Static - Required for app initialization)
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZ2lxeG54dXlpZW5jemRwbWx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc2NTA5NjYsImV4cCI6MjA1MzIyNjk2Nn0.HQG38G7RBQ0En4saTB_v8hIY7L03Y0GpyTpO0Mp-9no';
 
@@ -12,12 +15,16 @@ export const APP_CURRENT_VERSION = '1.1.0';
 
 // Default fallback values (used until database values are loaded)
 export const DEFAULT_CONSTANTS = {
-  CONTACT_US_API_URL: 'https://www.mobilecrm.org/api/email/esend',
+  CONTACT_US_API_URL: IS_DEVELOPMENT
+    ? 'http://192.168.0.53:3000/api/email/esend'
+    : 'https://www.mobilecrm.org/api/email/esend',
   APP_STORE_ID: '6741738531',
   APP_STORE_URL: 'https://apps.apple.com/gb/app/stocard/id6741738531',
   TERMS_OF_SERVICE_URL: 'https://www.mobilecrm.org/p/terms',
   PRIVACY_POLICY_URL: 'https://www.mobilecrm.org/p/privacy',
-  SERVER_URL: 'https://www.mobilecrm.org/',
+  SERVER_URL: IS_DEVELOPMENT
+    ? 'http://192.168.0.53:3000'
+    : 'https://www.mobilecrm.org',
   ONBOARDING_VIDEO_ID: 'CI0pwaRei74',
 };
 

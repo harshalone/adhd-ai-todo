@@ -137,7 +137,7 @@ export default function OTPRegistrationScreen({ route, navigation }) {
         <TouchableOpacity
           style={[
             styles.button,
-            { backgroundColor: '#f26e5f' },
+            { backgroundColor: theme.colors.primary },
             loading && styles.buttonDisabled,
           ]}
           onPress={handleVerifyOTP}

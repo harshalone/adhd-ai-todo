@@ -134,7 +134,7 @@ export default function OTPScreen({ route, navigation }) {
         <TouchableOpacity
           style={[
             styles.button,
-            { backgroundColor: '#f26e5f' },
+            { backgroundColor: theme.colors.primary },
             loading && styles.buttonDisabled,
           ]}
           onPress={handleVerifyOTP}
@@ -189,14 +189,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 12,
     paddingTop: 16,
     paddingBottom: 8,
   },
   backButton: {
     width: 40,
     height: 40,
-    justifyContent: 'left',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   content: {

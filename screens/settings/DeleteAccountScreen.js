@@ -4,14 +4,13 @@ import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import useAuthStore from '../../stores/authStore';
 import BackButton from '../../components/BackButton';
-import { CONTACT_US_API_URL } from '../../utils/constants';
+import { getServerUrl } from '../../utils/constants';
 
 export default function DeleteAccountScreen({ navigation }) {
   const { theme } = useTheme();
-  const { user, logout } = useAuthStore();
+  const { user, logout, accessToken } = useAuthStore();
   const [feedback, setFeedback] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const feedbackOptions = [
     "I don't use the app anymore",
@@ -32,75 +31,87 @@ export default function DeleteAccountScreen({ navigation }) {
       return;
     }
 
+    if (!accessToken) {
+      Alert.alert('Error', 'Authentication token not found. Please try logging in again.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const requestBody = {
-        name: user?.name || user?.email || 'Unknown User',
-        email: user?.email || '',
-        message: `Account Deletion Request - Reason: ${feedback}`,
-        type: 'account_deletion',
-        user_id: user?.id || ''
-      };
+      // Get server URL from constants
+      const serverUrl = await getServerUrl();
 
-      const response = await fetch(CONTACT_US_API_URL, {
+      // Step 1: Delete user data from database
+      console.log('========== DELETE ACCOUNT API REQUEST ==========');
+      console.log('URL:', `${serverUrl}/api/user/delete`);
+      console.log('Method: POST');
+      console.log('Headers:', {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken.substring(0, 50)}...`,
+      });
+      console.log('Full Authorization Header:', `Bearer ${accessToken}`);
+      console.log('User ID:', user?.id);
+      console.log('User Email:', user?.email);
+      console.log('===============================================');
+
+      const deleteResponse = await fetch(`${serverUrl}/api/user/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      console.log('========== DELETE ACCOUNT API RESPONSE ==========');
+      console.log('Status:', deleteResponse.status);
+      console.log('Status Text:', deleteResponse.statusText);
+      console.log('Headers:', JSON.stringify(Object.fromEntries(deleteResponse.headers.entries())));
+      console.log('===============================================');
+
+      const deleteResult = await deleteResponse.json();
+
+      if (!deleteResponse.ok) {
+        console.error('Delete API error:', deleteResult);
+        Alert.alert('Error', deleteResult.error || 'Failed to delete user data. Please try again.');
+        return;
+      }
+
+      console.log('User data deleted successfully:', deleteResult);
+
+      // Step 2: Send notification email
+      console.log('Step 2: Sending notification email...');
+      const notifyResponse = await fetch(`${serverUrl}/api/email/notify-delete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          email: user?.email || deleteResult.email,
+        }),
       });
 
-      if (response.ok) {
-        setShowConfirmation(true);
+      const notifyResult = await notifyResponse.json();
+
+      if (!notifyResponse.ok) {
+        console.error('Email notification failed:', notifyResult);
+        // Don't fail the entire process if email fails
+        console.warn('Email notification failed, but user data was deleted successfully');
       } else {
-        Alert.alert('Error', 'Failed to process deletion request. Please try again.');
+        console.log('Notification email sent successfully:', notifyResult);
       }
+
+      // Step 3: Automatically logout user
+      await logout();
+      Alert.alert('Account Deleted', 'Your account has been permanently deleted. Thank you for using our service.');
+
     } catch (error) {
+      console.error('Delete account error:', error);
       Alert.alert('Error', 'Network error. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleConfirmLogout = async () => {
-    try {
-      await logout();
-      Alert.alert('Account Deletion Requested', 'You have been logged out. Your account information will be deleted within 72 hours.', [
-        { text: 'OK', onPress: () => navigation.navigate('Auth') }
-      ]);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to logout. Please try again.');
-    }
-  };
-
-  if (showConfirmation) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.header}>
-          <BackButton onPress={() => navigation.goBack()} />
-          <Text style={[styles.title, { color: theme.colors.text }]}>Account Deletion</Text>
-        </View>
-        <View style={styles.confirmationContent}>
-          <Text style={[styles.confirmationTitle, { color: theme.colors.text }]}>
-            Deletion Request Submitted
-          </Text>
-          <Text style={[styles.confirmationMessage, { color: theme.colors.text }]}>
-            Your account deletion request has been submitted successfully.
-          </Text>
-          <Text style={[styles.warningText, { color: theme.colors.text }]}>
-            All your information will be permanently deleted within the next 72 hours.
-          </Text>
-          <TouchableOpacity
-            style={[styles.logoutButton, { backgroundColor: '#f26e5f' }]}
-            onPress={handleConfirmLogout}
-          >
-            <Text style={styles.logoutButtonText}>Logout Now</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -217,12 +228,6 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 0,
   },
-  confirmationContent: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   title: {
     fontSize: 28,
     fontWeight: '700',
@@ -232,18 +237,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     marginBottom: 24,
     lineHeight: 22,
-  },
-  confirmationTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  confirmationMessage: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 24,
-    opacity: 0.8,
   },
   feedbackSection: {
     marginBottom: 32,
@@ -292,18 +285,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   deleteButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  logoutButton: {
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 24,
-    width: '80%',
-  },
-  logoutButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
