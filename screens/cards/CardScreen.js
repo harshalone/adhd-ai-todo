@@ -273,8 +273,8 @@ export default function CardScreen({ route, navigation }) {
     <SafeAreaView style={[styles.container, { backgroundColor: lightTheme.colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBackPress} style={styles.headerButton}>
-          <ChevronLeft size={39} color={lightTheme.colors.text} />
+        <TouchableOpacity onPress={handleBackPress}>
+          <ChevronLeft size={39} color={lightTheme.colors.primary} />
         </TouchableOpacity>
         <View style={styles.headerRight}>
           <TouchableOpacity

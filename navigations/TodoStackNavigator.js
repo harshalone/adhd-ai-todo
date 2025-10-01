@@ -3,6 +3,7 @@ import TodoHomeScreen from '../screens/todo/TodoHomeScreen';
 import TodoAddScreen from '../screens/todo/TodoAddScreen';
 import AiTodoAddScreen from '../screens/todo/AiTodoAddScreen';
 import EditTodoScreen from '../screens/todo/EditTodoScreen';
+import ScheduledNotificationsScreen from '../screens/todo/ScheduledNotificationsScreen';
 import PayWallScreen from '../screens/PayWallScreen';
 import { useTheme } from '../context/ThemeContext';
 
@@ -22,6 +23,7 @@ export default function TodoStackNavigator() {
       <Stack.Screen name="TodoAdd" component={TodoAddScreen} />
       <Stack.Screen name="AiTodoAdd" component={AiTodoAddScreen} />
       <Stack.Screen name="EditTodo" component={EditTodoScreen} />
+      <Stack.Screen name="ScheduledNotifications" component={ScheduledNotificationsScreen} />
       <Stack.Screen
         name="PayWall"
         component={PayWallScreen}

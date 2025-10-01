@@ -90,10 +90,9 @@ export default function OTPScreen({ route, navigation }) {
         >
           <View style={styles.header}>
             <TouchableOpacity
-              style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
-              <ChevronLeft size={39} color={theme.colors.text} />
+              <ChevronLeft size={39} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -189,15 +188,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     paddingTop: 16,
     paddingBottom: 8,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     flex: 1,

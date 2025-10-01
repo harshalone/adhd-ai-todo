@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscriptionContext } from '../context/SubscriptionContext';
 import { PurchaseButton, RestorePurchasesButton } from '../components/SubscriptionGate';
-import { X, Sparkles, Zap, Clock, Brain, Check } from 'lucide-react-native';
+import { X, Sparkles, Zap, Clock, Brain, Check, RefreshCw } from 'lucide-react-native';
 import { useState } from 'react';
 import { revenueCatService } from '../services/revenueCatService';
 
@@ -14,6 +14,7 @@ export default function PayWallScreen({ navigation, route }) {
     loading,
     initialized,
     refreshSubscription,
+    refreshOfferings,
   } = useSubscriptionContext();
 
   // Get the intended destination from route params
@@ -26,6 +27,7 @@ export default function PayWallScreen({ navigation, route }) {
   // Track selected package
   const [selectedPackageId, setSelectedPackageId] = useState(availablePackages[0]?.identifier || null);
   const [purchasing, setPurchasing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handlePurchase = async () => {
     if (!selectedPackageId || purchasing) return;
@@ -95,6 +97,17 @@ export default function PayWallScreen({ navigation, route }) {
     navigation.goBack();
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshOfferings();
+    } catch (error) {
+      Alert.alert('Refresh Failed', 'Failed to refresh subscription plans. Please try again.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   if (!initialized || loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -139,9 +152,22 @@ export default function PayWallScreen({ navigation, route }) {
         {/* Subscription Plans */}
         {availablePackages.length > 0 ? (
           <View style={styles.plansSection}>
-            <Text style={[styles.plansTitle, { color: theme.colors.text }]}>
-              Choose Your Plan
-            </Text>
+            <View style={styles.plansTitleContainer}>
+              <Text style={[styles.plansTitle, { color: theme.colors.text }]}>
+                Choose Your Plan
+              </Text>
+              <TouchableOpacity
+                style={[styles.refreshButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                onPress={handleRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw
+                  size={18}
+                  color={theme.colors.primary}
+                  style={refreshing && styles.refreshing}
+                />
+              </TouchableOpacity>
+            </View>
 
             {availablePackages.map((pkg, index) => {
               // Generate simple title based on package type
@@ -253,6 +279,20 @@ export default function PayWallScreen({ navigation, route }) {
               <Text style={[styles.noPlansText, { color: theme.colors.textSecondary }]}>
                 No subscription plans are currently available. Please check back later.
               </Text>
+              <TouchableOpacity
+                style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
+                onPress={handleRefresh}
+                disabled={refreshing}
+              >
+                {refreshing ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <RefreshCw size={18} color="#fff" />
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -385,11 +425,27 @@ const styles = StyleSheet.create({
   plansSection: {
     marginBottom: 24,
   },
+  plansTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
   plansTitle: {
     fontSize: 20,
     fontWeight: '700',
-    marginBottom: 16,
-    textAlign: 'center',
+  },
+  refreshButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  refreshing: {
+    transform: [{ rotate: '360deg' }],
   },
   packageCard: {
     padding: 14,
@@ -469,5 +525,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
+    marginBottom: 16,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    gap: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

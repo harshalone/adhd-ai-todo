@@ -2,7 +2,7 @@ import { StyleSheet, Text, View, TouchableOpacity, FlatList, RefreshControl, Dim
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, RefreshCw, Mic, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Plus, RefreshCw, Mic, ChevronDown, ChevronUp, Bell } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
@@ -75,6 +75,11 @@ export default function TodoHomeScreen({ navigation }) {
     } else {
       navigation.navigate('PayWall', { destination: 'AiTodoAdd' });
     }
+  };
+
+  const handleNotifications = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('ScheduledNotifications');
   };
 
   const handleTodoPress = async (todo) => {
@@ -261,6 +266,12 @@ export default function TodoHomeScreen({ navigation }) {
         <View style={styles.headerRight}>
           <CheckVersion />
           <TouchableOpacity
+            style={[styles.bellButton, { backgroundColor: '#FF6B6B' }]}
+            onPress={handleNotifications}
+          >
+            <Bell size={22} color="#fff" strokeWidth={2.5} />
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[styles.micButton, {
               backgroundColor: theme.colors.surface,
               borderWidth: 2,
@@ -374,6 +385,21 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bellButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  bellIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },

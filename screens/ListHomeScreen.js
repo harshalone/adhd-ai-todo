@@ -159,7 +159,7 @@ export default function ListHomeScreen({ navigation }) {
           <Text style={[styles.title, { color: theme.colors.text }]}>Lists</Text>
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: theme.colors.orange }]}
+              style={[styles.actionButton, { backgroundColor: '#FF6B6B' }]}
               onPress={handleImportPress}
             >
               <Download size={24} color="#fff" />
@@ -239,7 +239,7 @@ export default function ListHomeScreen({ navigation }) {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.modalButton, styles.importButton, { backgroundColor: theme.colors.orange }]}
+                style={[styles.modalButton, styles.importButton, { backgroundColor: theme.colors.primary }]}
                 onPress={handleImportSubmit}
                 disabled={importLoading || !importListId.trim()}
               >

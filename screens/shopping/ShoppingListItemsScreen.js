@@ -472,10 +472,9 @@ export default function ShoppingListItemsScreen({ route, navigation }) {
       <View style={styles.content}>
         <View style={styles.headerRow}>
           <TouchableOpacity
-            style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <ChevronLeft size={39} color={theme.colors.text} />
+            <ChevronLeft size={39} color={theme.colors.primary} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -929,14 +928,10 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 0,
-    paddingRight: 0,
+    paddingLeft: 8,
+    paddingRight: 8,
     paddingTop: 8,
     marginBottom: 12
-  },
-  backButton: {
-    marginRight: 0,
-    marginLeft: -10
   },
   searchBox: {
     flex: 1,

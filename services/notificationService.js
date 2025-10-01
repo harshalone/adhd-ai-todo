@@ -113,28 +113,57 @@ export const notificationService = {
 
         // Only schedule if notification time is in the future
         if (notificationTime > now) {
+          // Extract date and time components for clarity
+          const year = notificationTime.getFullYear();
+          const month = notificationTime.getMonth(); // 0-indexed
+          const day = notificationTime.getDate();
+          const hour = notificationTime.getHours();
+          const minute = notificationTime.getMinutes();
+          const second = notificationTime.getSeconds();
+
+          console.log(`📅 Scheduling notification for: ${year}-${month + 1}-${day} at ${hour}:${minute}:${second}`);
+
           const notificationId = await Notifications.scheduleNotificationAsync({
+            identifier: `todo-${todo.uid || todo.id}-${minutes}min`,
             content: {
               title: this.getNotificationTitle(todo, minutes),
               body: this.getNotificationBody(todo, minutes),
               data: {
                 todoId: todo.id,
+                todoUid: todo.uid || todo.id,
                 alertMinutes: minutes,
                 type: 'todo_reminder',
                 scheduledAt: new Date().toISOString(),
                 dueDateTime: dueDateTime.toISOString(),
+                scheduledDate: `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+                scheduledTime: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`,
               },
               sound: true,
               priority: Notifications.AndroidNotificationPriority.HIGH,
               badge: 1,
+              android: {
+                channelId: 'default',
+                sound: true,
+                priority: 'high',
+              },
+              ios: {
+                sound: true,
+              },
             },
             trigger: {
-              date: notificationTime,
+              // Using calendar-based trigger for more precise scheduling
+              year,
+              month: month + 1, // Expo uses 1-indexed months (1-12)
+              day,
+              hour,
+              minute,
+              second,
+              channelId: 'default',
             },
           });
 
           notificationIds.push(notificationId);
-          console.log(`✅ Scheduled notification ${notificationId} for todo "${todo.title}" at ${notificationTime.toLocaleString()} (${minutes} min before due time)`);
+          console.log(`✅ Scheduled notification ${notificationId} for todo "${todo.title}" (uid: ${todo.uid || todo.id}) at ${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} (${minutes} min before due time)`);
         } else {
           console.log(`⏭️ Skipped notification for todo "${todo.title}" - ${minutes} min alert time (${notificationTime.toLocaleString()}) is in the past`);
         }
@@ -170,11 +199,14 @@ export const notificationService = {
   },
 
   // Get existing notifications for a specific todo
-  async getExistingNotificationsForTodo(todoId) {
+  async getExistingNotificationsForTodo(todoId, todoUid = null) {
     try {
       const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
       return scheduledNotifications.filter(
-        notification => notification.content.data?.todoId === todoId
+        notification => {
+          const data = notification.content.data;
+          return data?.todoId === todoId || data?.todoUid === (todoUid || todoId);
+        }
       );
     } catch (error) {
       console.error('Error getting existing notifications for todo:', error);
@@ -183,16 +215,19 @@ export const notificationService = {
   },
 
   // Cancel all notifications for a specific todo
-  async cancelNotificationsForTodo(todoId) {
+  async cancelNotificationsForTodo(todoId, todoUid = null) {
     try {
       const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
       const todoNotifications = scheduledNotifications.filter(
-        notification => notification.content.data?.todoId === todoId
+        notification => {
+          const data = notification.content.data;
+          return data?.todoId === todoId || data?.todoUid === (todoUid || todoId);
+        }
       );
 
       for (const notification of todoNotifications) {
         await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-        console.log(`Cancelled notification ${notification.identifier} for todo ${todoId}`);
+        console.log(`Cancelled notification ${notification.identifier} for todo ${todoId} (uid: ${todoUid || todoId})`);
       }
 
       return { cancelledCount: todoNotifications.length, error: null };
@@ -494,12 +529,26 @@ export const notificationService = {
       }
 
       const notificationId = await Notifications.scheduleNotificationAsync({
+        identifier: 'test-notification',
         content: {
           title: '🧠 ADHD Todo Test',
           body: 'Your notification system is working perfectly!',
           data: { type: 'test' },
+          sound: true,
+          android: {
+            channelId: 'default',
+            sound: true,
+            priority: 'high',
+          },
+          ios: {
+            sound: true,
+          },
         },
-        trigger: { seconds: 1 },
+        trigger: {
+          type: 'timeInterval',
+          seconds: 1,
+          channelId: 'default',
+        },
       });
 
       console.log(`✅ Test notification scheduled with ID: ${notificationId}`);
@@ -600,15 +649,27 @@ export const notificationService = {
       await this.cancelDailyReminder();
 
       const notificationId = await Notifications.scheduleNotificationAsync({
+        identifier: 'daily-reminder',
         content: {
           title: '🧠 Daily ADHD Todo Check-in',
           body: 'Ready to tackle your tasks today? Check your todo list!',
           data: { type: 'daily_reminder' },
+          sound: true,
+          android: {
+            channelId: 'default',
+            sound: true,
+            priority: 'high',
+          },
+          ios: {
+            sound: true,
+          },
         },
         trigger: {
+          type: 'daily',
           hour: time.hour,
           minute: time.minute,
           repeats: true,
+          channelId: 'default',
         },
       });
 

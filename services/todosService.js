@@ -1,5 +1,6 @@
 import { supabase } from '../utils/supabase';
 import { notificationService } from './notificationService';
+import useNotificationStore from '../stores/notificationStore';
 
 export const todosService = {
   // Fetch all todos for the current user, sorted by priority and due date
@@ -80,6 +81,12 @@ export const todosService = {
         }
       }
 
+      // Sync to notification store
+      if (data) {
+        const { syncNotificationFromTodo } = useNotificationStore.getState();
+        syncNotificationFromTodo(data);
+      }
+
       return { data, error: null };
     } catch (error) {
       console.error('Add todo error:', error);
@@ -110,6 +117,12 @@ export const todosService = {
         } catch (notifError) {
           console.error('Error cancelling notifications for completed todo:', notifError);
         }
+      }
+
+      // Update notification store
+      if (data) {
+        const { markNotificationCompleted } = useNotificationStore.getState();
+        markNotificationCompleted(todoId, completed, data.uid);
       }
 
       return { data, error: null };
@@ -144,6 +157,12 @@ export const todosService = {
         }
       }
 
+      // Sync updated todo to notification store
+      if (data) {
+        const { syncNotificationFromTodo } = useNotificationStore.getState();
+        syncNotificationFromTodo(data);
+      }
+
       return { data, error: null };
     } catch (error) {
       console.error('Update todo error:', error);
@@ -154,6 +173,9 @@ export const todosService = {
   // Soft delete a todo
   async deleteTodo(todoId) {
     try {
+      // Get todo data first to access uid
+      const { data: todoData } = await this.getTodoById(todoId);
+
       const { error } = await supabase
         .from('todos')
         .update({
@@ -164,13 +186,19 @@ export const todosService = {
 
       if (error) throw error;
 
+      const todoUid = todoData?.uid || todoId;
+
       // Cancel notifications when todo is deleted
       try {
-        await notificationService.cancelNotificationsForTodo(todoId);
-        console.log(`Cancelled notifications for deleted todo: ${todoId}`);
+        await notificationService.cancelNotificationsForTodo(todoId, todoUid);
+        console.log(`Cancelled notifications for deleted todo: ${todoId} (uid: ${todoUid})`);
       } catch (notifError) {
         console.error('Error cancelling notifications for deleted todo:', notifError);
       }
+
+      // Remove from notification store
+      const { removeNotification } = useNotificationStore.getState();
+      removeNotification(todoUid);
 
       return { error: null };
     } catch (error) {
@@ -182,6 +210,9 @@ export const todosService = {
   // Permanently delete a todo
   async permanentlyDeleteTodo(todoId) {
     try {
+      // Get todo data first to access uid
+      const { data: todoData } = await this.getTodoById(todoId);
+
       const { error } = await supabase
         .from('todos')
         .delete()
@@ -189,13 +220,19 @@ export const todosService = {
 
       if (error) throw error;
 
+      const todoUid = todoData?.uid || todoId;
+
       // Cancel notifications when todo is permanently deleted
       try {
-        await notificationService.cancelNotificationsForTodo(todoId);
-        console.log(`Cancelled notifications for permanently deleted todo: ${todoId}`);
+        await notificationService.cancelNotificationsForTodo(todoId, todoUid);
+        console.log(`Cancelled notifications for permanently deleted todo: ${todoId} (uid: ${todoUid})`);
       } catch (notifError) {
         console.error('Error cancelling notifications for permanently deleted todo:', notifError);
       }
+
+      // Remove from notification store
+      const { removeNotification } = useNotificationStore.getState();
+      removeNotification(todoUid);
 
       return { error: null };
     } catch (error) {

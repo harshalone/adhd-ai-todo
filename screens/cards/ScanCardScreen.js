@@ -160,10 +160,9 @@ export default function ScanCardScreen({ navigation, route }) {
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <ChevronLeft size={24} color={theme.colors.text} />
+            <ChevronLeft size={39} color={theme.colors.primary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Scan Card
@@ -194,10 +193,9 @@ export default function ScanCardScreen({ navigation, route }) {
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <ChevronLeft size={39} color={theme.colors.text} />
+            <ChevronLeft size={39} color={theme.colors.primary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             {truncateCardName(cardData?.name)}
@@ -413,12 +411,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 8,
     paddingVertical: 16,
-  },
-  backButton: {
-    marginRight: 6,
-    marginLeft: -8,
   },
   headerTitle: {
     fontSize: 20,

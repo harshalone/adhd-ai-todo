@@ -38,7 +38,7 @@ export default function ShoppingStackNavigator() {
           headerBackTitle: '',
           headerBackTitleVisible: false,
           headerBackImage: () => (
-            <ChevronLeft size={39} color={theme.colors.text} />
+            <ChevronLeft size={39} color={theme.colors.primary} />
           ),
         }}
       />

@@ -193,10 +193,9 @@ export default function AddCardScreen({ navigation }) {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.headerRow}>
         <TouchableOpacity
-          style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <ChevronLeft size={39} color={theme.colors.text} />
+          <ChevronLeft size={39} color={theme.colors.primary} />
         </TouchableOpacity>
         <View style={[styles.searchBox, {
           backgroundColor: theme.colors.surface,
@@ -233,12 +232,9 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
+    paddingHorizontal: 8,
     paddingTop: 8,
     marginBottom: 12
-  },
-  backButton: {
-    marginRight: 6,
   },
   searchBox: {
     flex: 1,
