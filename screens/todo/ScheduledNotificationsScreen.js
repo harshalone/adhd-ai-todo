@@ -146,10 +146,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   deleteButton: {
-    padding: 0,
+    padding: 4,
     marginLeft: 8,
-    marginTop: -20,
-    marginRight: -5
   },
   notificationTitle: {
     fontSize: 16,

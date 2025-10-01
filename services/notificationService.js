@@ -757,5 +757,17 @@ export const notificationService = {
     }
 
     return suggestions.sort((a, b) => a - b); // Sort ascending
+  },
+
+  // Clear app badge count (notification number on app icon)
+  async clearBadgeCount() {
+    try {
+      await Notifications.setBadgeCountAsync(0);
+      console.log('✅ App badge count cleared');
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('❌ Error clearing badge count:', error);
+      return { success: false, error: error.message };
+    }
   }
 };

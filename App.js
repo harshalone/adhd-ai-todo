@@ -139,6 +139,8 @@ function AppContent() {
       try {
         // Initialize notifications only (RevenueCat will be lazy loaded when needed)
         await initializeNotifications('startup');
+        // Clear badge count when app opens
+        await notificationService.clearBadgeCount();
       } catch (error) {
         console.error('❌ Failed to initialize app:', error);
       }
@@ -154,6 +156,9 @@ function AppContent() {
 
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         console.log('📱 App came to foreground');
+
+        // Clear badge count when app comes to foreground
+        await notificationService.clearBadgeCount();
 
         // Re-initialize notifications if it's been more than 30 minutes since last schedule
         const timeSinceLastSchedule = Date.now() - lastScheduleTime.current;
