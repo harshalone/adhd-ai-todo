@@ -4,13 +4,14 @@ import { FlashList } from '@shopify/flash-list';
 import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Plus, List, UserStar, Rows3, Download } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../utils/supabase';
 import useAuthStore from '../stores/authStore';
 
 export default function ListHomeScreen({ navigation }) {
   const { theme } = useTheme();
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const [shoppingLists, setShoppingLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -19,10 +20,26 @@ export default function ListHomeScreen({ navigation }) {
   const [importLoading, setImportLoading] = useState(false);
 
   const handleAddPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
+      return;
+    }
+
     navigation.navigate('AddList');
   };
 
   const handleImportPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
+      return;
+    }
+
     setImportModalVisible(true);
   };
 
@@ -97,7 +114,11 @@ export default function ListHomeScreen({ navigation }) {
   };
 
   const fetchShoppingLists = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setShoppingLists([]);
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase

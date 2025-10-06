@@ -12,10 +12,12 @@ import moment from 'moment';
 import CheckVersion from '../../components/CheckVersion';
 import TodoListItem from '../../components/TodoListItem';
 import { useSubscriptionContext } from '../../context/SubscriptionContext';
+import useAuthStore from '../../stores/authStore';
 
 export default function TodoHomeScreen({ navigation }) {
   const { theme } = useTheme();
   const { hasActiveSubscription, checkSubscription } = useSubscriptionContext();
+  const { isAuthenticated } = useAuthStore();
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,10 +65,26 @@ export default function TodoHomeScreen({ navigation }) {
   }, [fetchTodos]);
 
   const handleAddTodo = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
+      return;
+    }
+
     navigation.navigate('TodoAdd');
   };
 
   const handleVoiceInput = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Check if user is authenticated first
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
+      return;
+    }
+
     // Check subscription status lazily when user clicks voice button
     const isSubscribed = await checkSubscription();
 

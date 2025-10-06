@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, Alert, Share, Modal, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, Sun, Moon, Smartphone, ChevronRight, User, Globe, MessageCircle, Trash2, FileText, Shield, LogOut, Share as ShareIcon, Bell, CreditCard } from 'lucide-react-native';
+import { Settings, Sun, Moon, Smartphone, ChevronRight, User, Globe, MessageCircle, Trash2, FileText, Shield, LogOut, Share as ShareIcon, Bell, CreditCard, LogIn } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
@@ -11,7 +11,7 @@ import { APP_STORE_URL } from '../utils/constants';
 
 export default function SettingsScreen({ navigation }) {
   const { theme, themeMode } = useTheme();
-  const { logout } = useAuthStore();
+  const { logout, isAuthenticated } = useAuthStore();
   const { country } = useSettingsStore();
   const [showShareModal, setShowShareModal] = useState(false);
 
@@ -133,6 +133,95 @@ export default function SettingsScreen({ navigation }) {
         return 'Automatic';
     }
   };
+
+  const handleLoginPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate('Login');
+  };
+
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={[styles.title, { color: theme.colors.text }]}>Settings</Text>
+
+          <View style={styles.loginPromptContainer}>
+            <View style={[styles.loginPromptIconContainer, { backgroundColor: theme.colors.surface }]}>
+              <LogIn size={48} color={theme.colors.primary} strokeWidth={2} />
+            </View>
+            <Text style={[styles.loginPromptTitle, { color: theme.colors.text }]}>
+              Login Required
+            </Text>
+            <Text style={[styles.loginPromptSubtitle, { color: theme.colors.textSecondary }]}>
+              Please login to access your settings and profile
+            </Text>
+            <TouchableOpacity
+              style={[styles.loginPromptButton, { backgroundColor: theme.colors.primary }]}
+              onPress={handleLoginPress}
+            >
+              <LogIn size={20} color="#fff" />
+              <Text style={styles.loginPromptButtonText}>Login</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Appearance setting - always available */}
+          <View style={styles.settingsSection}>
+            <TouchableOpacity
+              style={[styles.settingItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+              onPress={navigateToTheme}
+            >
+              <View style={styles.settingLeft}>
+                {getThemeIcon()}
+                <Text style={[styles.settingLabel, { color: theme.colors.text }]}>Appearance</Text>
+              </View>
+              <View style={styles.settingRight}>
+                <Text style={[styles.settingValue, { color: theme.colors.text }]}>{getThemeText()}</Text>
+                <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.settingItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+              onPress={navigateToTerms}
+            >
+              <View style={styles.settingLeft}>
+                <FileText size={20} color={theme.colors.text} />
+                <Text style={[styles.settingLabel, { color: theme.colors.text }]}>Terms and Services</Text>
+              </View>
+              <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.settingItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+              onPress={navigateToPrivacy}
+            >
+              <View style={styles.settingLeft}>
+                <Shield size={20} color={theme.colors.text} />
+                <Text style={[styles.settingLabel, { color: theme.colors.text }]}>Privacy Policy</Text>
+              </View>
+              <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.settingItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+              onPress={handleShare}
+            >
+              <View style={styles.settingLeft}>
+                <ShareIcon size={20} color={theme.colors.text} />
+                <Text style={[styles.settingLabel, { color: theme.colors.text }]}>Share</Text>
+              </View>
+              <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -489,5 +578,46 @@ const styles = StyleSheet.create({
   shareButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  loginPromptContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 40,
+    marginBottom: 32,
+  },
+  loginPromptIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  loginPromptTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  loginPromptSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  loginPromptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    gap: 8,
+  },
+  loginPromptButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

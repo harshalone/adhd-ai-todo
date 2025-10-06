@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "WebFetch(domain:docs.expo.dev)",
+      "Bash(curl:*)",
+      "Bash(yarn add:*)",
+      "Bash(rm:*)",
+      "Bash(npx expo start:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ChevronLeft } from 'lucide-react-native';
+import { CommonActions } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { authHelpers } from '../../utils/supabase';
 import useAuthStore from '../../stores/authStore';
@@ -51,11 +52,20 @@ export default function OTPRegistrationScreen({ route, navigation }) {
         // Store authentication data
         setAuthenticated(data.user, data.session);
 
-        // Navigate to onboarding flow instead of home
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'OnboardingStack' }],
-        });
+        console.log('Registration successful for:', email);
+
+        // Reset the navigation stack to the home screen of the current tab
+        // This clears all auth screens and shows a fresh home page
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [
+              {
+                name: navigation.getState().routes[0].name // Get the root screen name (TodoMain, ListHome, etc.)
+              }
+            ],
+          })
+        );
       } else {
         Alert.alert('Error', 'Authentication failed. Please try again.');
       }

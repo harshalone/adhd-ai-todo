@@ -3,6 +3,11 @@ import { ChevronLeft } from 'lucide-react-native';
 import ListHomeScreen from '../screens/ListHomeScreen';
 import AddListScreen from '../screens/lists/AddListScreen';
 import ListItemsScreen from '../screens/lists/ListItemsScreen';
+import LoginScreen from '../screens/auth/LoginScreen';
+import RegisterScreen from '../screens/auth/RegisterScreen';
+import OTPScreen from '../screens/auth/OTPScreen';
+import OTPRegistrationScreen from '../screens/auth/OTPRegistrationScreen';
+import WebViewScreen from '../components/WebViewScreen';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createStackNavigator();
@@ -46,6 +51,19 @@ export default function ListStackNavigator() {
         name="ListItems"
         component={ListItemsScreen}
         options={{ headerShown: false }}
+      />
+      {/* Auth screens */}
+      <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="OTP" component={OTPScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="OTPRegistration" component={OTPRegistrationScreen} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="WebView"
+        component={WebViewScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+        }}
       />
     </Stack.Navigator>
   );

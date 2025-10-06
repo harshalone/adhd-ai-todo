@@ -51,8 +51,12 @@ export default function OTPScreen({ route, navigation }) {
         // Store authentication data
         setAuthenticated(data.user, data.session);
 
-        // Navigation will be handled by the main app based on auth state
         console.log('Authentication successful for:', email);
+
+        // Navigate back to the previous screen (where user came from)
+        // This will take them back to Todo/List/Track/Settings home
+        navigation.goBack();
+        navigation.goBack(); // Go back twice to skip the Login screen too
       } else {
         Alert.alert('Error', 'Authentication failed. Please try again.');
       }

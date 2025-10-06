@@ -12,6 +12,8 @@ import {
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowLeft } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { authHelpers } from '../../utils/supabase';
 import { termsOfService, privacyPolicy } from '../../utils/constants';
@@ -68,6 +70,11 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.goBack();
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -76,6 +83,14 @@ export default function LoginScreen({ navigation }) {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.content}>
+          {/* Back Button */}
+          <TouchableOpacity
+            style={[styles.backButton, { backgroundColor: theme.colors.surface }]}
+            onPress={handleBack}
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+
           <View style={styles.logoSection}>
             <Logo size={80} />
           </View>
@@ -173,7 +188,15 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 10,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   logoSection: {
     alignItems: 'center',

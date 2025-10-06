@@ -5,7 +5,9 @@ import { todosService } from '../services/todosService';
 import { useState, useEffect, useCallback } from 'react';
 import moment from 'moment';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Focus } from 'lucide-react-native';
+import { Focus, LogIn } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import useAuthStore from '../stores/authStore';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -13,6 +15,7 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 export default function TrackScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation();
+  const { isAuthenticated } = useAuthStore();
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -141,6 +144,41 @@ export default function TrackScreen() {
   const dailyData = getDailyData();
   const weeklyData = getWeeklyData();
   const monthlyData = getMonthlyData();
+
+  const handleLoginPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate('Login');
+  };
+
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Track</Text>
+        </View>
+
+        <View style={styles.loginPromptContainer}>
+          <View style={[styles.loginPromptIconContainer, { backgroundColor: theme.colors.surface }]}>
+            <LogIn size={48} color={theme.colors.primary} strokeWidth={2} />
+          </View>
+          <Text style={[styles.loginPromptTitle, { color: theme.colors.text }]}>
+            Login Required
+          </Text>
+          <Text style={[styles.loginPromptSubtitle, { color: theme.colors.textSecondary }]}>
+            Please login to view your tracking data and progress
+          </Text>
+          <TouchableOpacity
+            style={[styles.loginPromptButton, { backgroundColor: theme.colors.primary }]}
+            onPress={handleLoginPress}
+          >
+            <LogIn size={20} color="#fff" />
+            <Text style={styles.loginPromptButtonText}>Login</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -392,5 +430,45 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '500',
     marginBottom: 4,
+  },
+  loginPromptContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  loginPromptIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  loginPromptTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  loginPromptSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  loginPromptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    gap: 8,
+  },
+  loginPromptButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

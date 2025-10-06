@@ -1,15 +1,14 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { View, ActivityIndicator } from 'react-native';
 import useAuthStore from '../stores/authStore';
-import AuthStackNavigator from './AuthStackNavigator';
 import OnboardingStackNavigator from './OnboardingStackNavigator';
 import TabNavigator from './TabNavigator';
 import { useTheme } from '../context/ThemeContext';
 
 export default function AppNavigator() {
   const { theme } = useTheme();
-  const { isAuthenticated, hasCompletedOnboarding, loading, initializeAuth } = useAuthStore();
+  const { hasCompletedOnboarding, loading, initializeAuth } = useAuthStore();
 
   useEffect(() => {
     // Initialize auth when app starts
@@ -31,9 +30,7 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {!isAuthenticated ? (
-        <AuthStackNavigator />
-      ) : !hasCompletedOnboarding ? (
+      {!hasCompletedOnboarding ? (
         <OnboardingStackNavigator />
       ) : (
         <TabNavigator />
