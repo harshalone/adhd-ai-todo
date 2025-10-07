@@ -2,6 +2,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import SettingsScreen from '../screens/SettingsScreen';
 import ThemeScreen from '../screens/settings/ThemeScreen';
 import ProfileScreen from '../screens/settings/ProfileScreen';
+import DailyScheduleScreen from '../screens/settings/DailyScheduleScreen';
+import AddDailyScheduleScreen from '../screens/settings/AddDailyScheduleScreen';
+import EditDailyScheduleScreen from '../screens/settings/EditDailyScheduleScreen';
+import NewAiTodoScreen from '../screens/settings/NewAiTodoScreen';
 import CountryScreen from '../screens/settings/CountryScreen';
 import ContactUsScreen from '../screens/settings/ContactUsScreen';
 import DeleteAccountScreen from '../screens/settings/DeleteAccountScreen';
@@ -31,6 +35,10 @@ export default function SettingsStackNavigator() {
     >
       <Stack.Screen name="SettingsMain" component={SettingsScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="DailySchedule" component={DailyScheduleScreen} />
+      <Stack.Screen name="AddDailySchedule" component={AddDailyScheduleScreen} />
+      <Stack.Screen name="EditDailySchedule" component={EditDailyScheduleScreen} />
+      <Stack.Screen name="NewAiTodo" component={NewAiTodoScreen} />
       <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} />
       <Stack.Screen name="Theme" component={ThemeScreen} />
       <Stack.Screen name="Country" component={CountryScreen} />

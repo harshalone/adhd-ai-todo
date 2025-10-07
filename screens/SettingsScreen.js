@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, Alert, Share, Modal, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, Sun, Moon, Smartphone, ChevronRight, User, Globe, MessageCircle, Trash2, FileText, Shield, LogOut, Share as ShareIcon, Bell, CreditCard, LogIn } from 'lucide-react-native';
+import { Settings, Sun, Moon, Smartphone, ChevronRight, User, Globe, MessageCircle, Trash2, FileText, Shield, LogOut, Share as ShareIcon, Bell, CreditCard, LogIn, Calendar, Sparkles } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
@@ -58,6 +58,16 @@ export default function SettingsScreen({ navigation }) {
   const navigateToSubscription = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('Subscriptions');
+  };
+
+  const navigateToDailySchedule = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('DailySchedule');
+  };
+
+  const navigateToNewAiTodo = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('NewAiTodo');
   };
 
   const handleShare = () => {
@@ -240,6 +250,28 @@ export default function SettingsScreen({ navigation }) {
             <View style={styles.settingLeft}>
               <User size={20} color={theme.colors.text} />
               <Text style={[styles.settingLabel, { color: theme.colors.text }]}>Profile</Text>
+            </View>
+            <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={navigateToDailySchedule}
+          >
+            <View style={styles.settingLeft}>
+              <Calendar size={20} color={theme.colors.text} />
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>Daily Schedule</Text>
+            </View>
+            <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={navigateToNewAiTodo}
+          >
+            <View style={styles.settingLeft}>
+              <Sparkles size={20} color={theme.colors.text} />
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>AI Todo</Text>
             </View>
             <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
           </TouchableOpacity>

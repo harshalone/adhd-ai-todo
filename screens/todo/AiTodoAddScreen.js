@@ -17,6 +17,7 @@ import TodoListItem from '../../components/TodoListItem';
 import { useTheme } from '../../context/ThemeContext';
 import { getServerUrl } from '../../utils/constants';
 import { todosService } from '../../services/todosService';
+import { reviewService } from '../../services/reviewService';
 
 export default function AiTodoAddScreen({ navigation }) {
   const { theme } = useTheme();
@@ -473,6 +474,9 @@ export default function AiTodoAddScreen({ navigation }) {
       // Success haptic feedback
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+      // Track AI todo usage for review system
+      await reviewService.trackAiTodoUsage();
+
       // Show popup and trigger confetti simultaneously
       setShowSuccessPopup(true);
       setTriggerConfetti(true);
@@ -481,6 +485,15 @@ export default function AiTodoAddScreen({ navigation }) {
       setTimeout(() => {
         setTriggerConfetti(false);
       }, 3000);
+
+      // Trigger review flow after a delay (so user sees success first)
+      setTimeout(async () => {
+        try {
+          await reviewService.handleReviewFlowForAiTodo();
+        } catch (error) {
+          console.warn('Review flow error:', error);
+        }
+      }, 4000); // Show review after confetti ends and success popup is visible
 
     } catch (error) {
       console.error('Save tasks error:', error);
