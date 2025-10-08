@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Animated, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Animated, Modal, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   useAudioRecorder,
@@ -8,7 +8,7 @@ import {
   setAudioModeAsync,
   useAudioRecorderState,
 } from 'expo-audio';
-import { Mic, MicOff, Sparkles, Check, Trash2 } from 'lucide-react-native';
+import { Mic, Sparkles, Check, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { apple } from '@react-native-ai/apple';
 import { experimental_transcribe as transcribe, generateText } from 'ai';
@@ -17,6 +17,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { todosService } from '../../services/todosService';
 import { Confetti } from 'react-native-fast-confetti';
 import TodoListItem from '../../components/TodoListItem';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const TRANSCRIPTION_MESSAGES = [
   "Recording complete! Let me transcribe this for you...",
@@ -27,17 +29,45 @@ const TRANSCRIPTION_MESSAGES = [
   "Just a moment, wrapping up..."
 ];
 
-const AI_PROCESSING_MESSAGES = [
-  "Analyzing your tasks with AI...",
-  "Understanding what needs to be done...",
-  "Breaking down your todos...",
-  "Creating actionable items...",
-  "Adding smart scheduling...",
-  "Almost ready with your tasks..."
-];
+// Waveform Bar Component
+const WaveformBar = ({ height, theme, index }) => {
+  const animatedHeight = useRef(new Animated.Value(height)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(animatedHeight, {
+          toValue: Math.random() * 60 + 20,
+          duration: 300 + Math.random() * 200,
+          useNativeDriver: false,
+        }),
+        Animated.timing(animatedHeight, {
+          toValue: Math.random() * 60 + 20,
+          duration: 300 + Math.random() * 200,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.waveformBar,
+        {
+          height: animatedHeight,
+          backgroundColor: theme.colors.primary,
+        },
+      ]}
+    />
+  );
+};
+
 
 export default function NewAiTodoScreen({ navigation }) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
   const [permissionGranted, setPermissionGranted] = useState(false);
@@ -48,10 +78,14 @@ export default function NewAiTodoScreen({ navigation }) {
   const [parsedTasks, setParsedTasks] = useState([]);
   const [autoProcess, setAutoProcess] = useState(true);
   const [transcriptionMessage, setTranscriptionMessage] = useState('');
-  const [processingMessage, setProcessingMessage] = useState('');
+  const [typewriterText, setTypewriterText] = useState('');
   const [savingTaskIndex, setSavingTaskIndex] = useState(-1);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [savedTasksCount, setSavedTasksCount] = useState(0);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState({ title: '', description: '' });
+  const [recordingTime, setRecordingTime] = useState(0);
+  const recordingTimerRef = useRef(null);
 
   // Animation refs
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -158,6 +192,33 @@ export default function NewAiTodoScreen({ navigation }) {
     }
   }, [recorderState.isRecording]);
 
+  // Recording timer
+  useEffect(() => {
+    if (recorderState.isRecording) {
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, [recorderState.isRecording]);
+
+  // Format recording time as MM:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
   const startRecording = async () => {
     if (!permissionGranted) {
       Alert.alert('Permission Required', 'Microphone permission is required to record audio');
@@ -187,16 +248,25 @@ export default function NewAiTodoScreen({ navigation }) {
       await audioRecorder.stop();
 
       const uri = audioRecorder.uri;
-      setCurrentStep(1);
+      // Don't advance progress bar yet - wait for successful task creation
 
       if (uri) {
         await transcribeAudio(uri);
       } else {
-        Alert.alert('Error', 'Recording URI not available');
+        setErrorMessage({
+          title: 'Recording Failed',
+          description: 'Recording not available. Please try recording again.'
+        });
+        setShowErrorModal(true);
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     } catch (error) {
       console.error('Error stopping recording:', error.message);
-      Alert.alert('Error', 'Failed to stop recording: ' + error.message);
+      setErrorMessage({
+        title: 'Recording Error',
+        description: 'Failed to stop recording. Please try again.'
+      });
+      setShowErrorModal(true);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
@@ -234,7 +304,11 @@ export default function NewAiTodoScreen({ navigation }) {
 
     } catch (error) {
       console.error('Error transcribing audio:', error.message);
-      setTranscriptionError('Failed to transcribe audio. Please try again.');
+      setErrorMessage({
+        title: 'Transcription Failed',
+        description: 'Could not transcribe your audio. Please ensure you spoke clearly and try recording again.'
+      });
+      setShowErrorModal(true);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       clearInterval(messageInterval);
@@ -252,14 +326,15 @@ export default function NewAiTodoScreen({ navigation }) {
     setParsedTasks([]);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    // Start cycling through AI processing messages
-    let messageIndex = 0;
-    setProcessingMessage(AI_PROCESSING_MESSAGES[0]);
-
-    const messageInterval = setInterval(() => {
-      messageIndex = (messageIndex + 1) % AI_PROCESSING_MESSAGES.length;
-      setProcessingMessage(AI_PROCESSING_MESSAGES[messageIndex]);
-    }, 2000); // Change message every 2 seconds
+    // Start typewriter animation
+    setTypewriterText('');
+    let currentIndex = 0;
+    const typewriterInterval = setInterval(() => {
+      if (currentIndex <= text.length) {
+        setTypewriterText(text.substring(0, currentIndex));
+        currentIndex++;
+      }
+    }, 30); // Add character every 30ms
 
     try {
       const now = new Date();
@@ -354,18 +429,38 @@ Parse this into actionable tasks following the format specified.`;
       const parsedResponse = JSON.parse(jsonMatch[0]);
 
       if (parsedResponse.tasks && parsedResponse.tasks.length > 0) {
+        // Add light haptic for each task created
+        for (let i = 0; i < parsedResponse.tasks.length; i++) {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
         setParsedTasks(parsedResponse.tasks);
-        // Keep at step 1 (Review) until user saves
+        // Advance to Review step only when tasks are successfully created
+        setCurrentStep(1);
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        // No tasks found, stay at review step
+        // No tasks found, show error modal
+        setErrorMessage({
+          title: 'No Tasks Found',
+          description: 'Your recording didn\'t contain any actionable tasks. Please try again with specific instructions like "Remind me to call John tomorrow at 3 PM".'
+        });
+        setShowErrorModal(true);
+        setCurrentStep(0);
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
 
     } catch (error) {
       console.error('Error processing with AI:', error.message);
+      setErrorMessage({
+        title: 'Task Creation Failed',
+        description: 'Could not create tasks from your recording. Please ensure you provide clear task instructions and try again.'
+      });
+      setShowErrorModal(true);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      // Reset to record step on error
+      setCurrentStep(0);
     } finally {
-      clearInterval(messageInterval);
+      clearInterval(typewriterInterval);
       setIsProcessing(false);
     }
   };
@@ -386,15 +481,21 @@ Parse this into actionable tasks following the format specified.`;
         const task = parsedTasks[i];
         const todoData = {
           title: task.title,
-          date: task.date,
+          due_date: task.date,
+          start_date: task.date,
           start_time: task.start_time,
-          due_time: task.due_time,
-          reminder: task.reminder,
-          priority: task.priority,
+          end_time: task.due_time,
+          alert_minutes: task.reminder ? [task.reminder] : null,
+          priority: task.priority !== undefined ? task.priority : 0,
           completed: false,
         };
 
-        await todosService.addTodo(todoData);
+        const result = await todosService.addTodo(todoData);
+
+        // Check if save was successful
+        if (result.error) {
+          throw new Error(result.error.message || 'Failed to save task');
+        }
 
         // Small delay between tasks for better UX
         await new Promise(resolve => setTimeout(resolve, 400));
@@ -421,14 +522,29 @@ Parse this into actionable tasks following the format specified.`;
 
     } catch (error) {
       console.error('Error saving tasks:', error);
+      setErrorMessage({
+        title: 'Save Failed',
+        description: `Failed to save tasks: ${error.message || 'Unknown error'}. Please try again.`
+      });
+      setShowErrorModal(true);
+      setSavingTaskIndex(-1);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
-  const handleSuccessModalClose = () => {
+  const handleSuccessModalClose = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowSuccessModal(false);
     setParsedTasks([]);
     setTranscribedText('');
+    setCurrentStep(0);
+  };
+
+  const handleErrorModalClose = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowErrorModal(false);
+    setTranscribedText('');
+    setParsedTasks([]);
     setCurrentStep(0);
   };
 
@@ -484,7 +600,12 @@ Parse this into actionable tasks following the format specified.`;
         <View style={styles.header}>
           <BackButton onPress={() => navigation.goBack()} />
           <View style={styles.headerCenter} />
-          <View style={styles.headerRight} />
+          <View style={styles.headerRight}>
+            <Sparkles size={20} color={theme.colors.primary} strokeWidth={2} />
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+              AI Planner
+            </Text>
+          </View>
         </View>
 
         {/* Thin progress bar */}
@@ -539,51 +660,103 @@ Parse this into actionable tasks following the format specified.`;
           {/* Main Hero Section */}
           {!transcribedText && !isTranscribing && parsedTasks.length === 0 && (
             <View style={styles.heroSection}>
-              <View style={styles.heroTextContainer}>
-                <View style={styles.heroTitleRow}> 
-                  <Text style={[styles.heroTitle, { color: theme.colors.text }]}>
-                    What's on your mind?
+
+              {/* Recording Timer Panel (inspired by the app screenshot) */}
+              {recorderState.isRecording && (
+                <View style={[
+                  styles.timerPanel,
+                  {
+                    backgroundColor: theme.colors.primary,
+                  }
+                ]}>
+                  <View style={styles.timerTopRow}>
+                    <View style={styles.recDot}>
+                      <View style={styles.recDotInner} />
+                    </View>
+                    <Text style={styles.timerText}>
+                      00.{formatTime(recordingTime).split(':')[0]}<Text style={styles.timerMinutes}>m</Text> {formatTime(recordingTime).split(':')[1]}<Text style={styles.timerSeconds}>s</Text>
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Waveform Visualization */}
+              {recorderState.isRecording && (
+                <View style={[styles.waveformContainer, { backgroundColor: theme.colors.surface }]}>
+                  <View style={styles.waveformBars}>
+                    {[...Array(40)].map((_, i) => (
+                      <WaveformBar key={i} height={Math.random() * 60 + 20} theme={theme} index={i} />
+                    ))}
+                  </View>
+                  <View style={styles.waveformTimeAxis}>
+                    <Text style={[styles.waveformTimeText, { color: theme.colors.textSecondary }]}>0:00</Text>
+                    <Text style={[styles.waveformTimeText, { color: theme.colors.textSecondary }]}>{formatTime(recordingTime)}</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Title when not recording */}
+              {!recorderState.isRecording && (
+                <View style={styles.heroTextContainer}>
+                  <View style={styles.heroTitleRow}>
+                    <Text style={[styles.heroTitle, { color: theme.colors.text }]}>
+                      What's on your mind?
+                    </Text>
+                  </View>
+                  <Text style={[styles.heroSubtitle, { color: theme.colors.textSecondary }]}>
+                    Tap the button below and speak naturally
                   </Text>
                 </View>
-                <Text style={[styles.heroSubtitle, { color: theme.colors.textSecondary }]}>
-                  Tap the button below and speak naturally
-                </Text>
-              </View>
+              )}
 
-              {/* Giant Hero Button */}
-              <View style={styles.heroButtonWrapper}>
-                <TouchableOpacity
-                  style={styles.heroButtonContainer}
-                  onPress={recorderState.isRecording ? stopRecording : startRecording}
-                  disabled={!permissionGranted}
-                  activeOpacity={0.85}
-                >
-                  <Animated.View
-                    style={[
-                      styles.heroButton,
-                      recorderState.isRecording
-                        ? { backgroundColor: '#FF3B30' }
-                        : { backgroundColor: theme.colors.primary },
-                      !permissionGranted && styles.heroButtonDisabled,
-                      {
-                        transform: [
-                          { scale: recorderState.isRecording ? pulseAnim : getHeroButtonScale },
-                        ],
-                        opacity: recorderState.isRecording ? 1 : getHeroButtonOpacity,
-                      },
-                    ]}
+              {/* Embossed Button Panel */}
+              <View style={[
+                styles.buttonPanel,
+                {
+                  backgroundColor: theme.colors.card,
+                  shadowColor: isDark ? '#FFFFFF' : '#000000',
+                }
+              ]}>
+                <View style={[
+                  styles.buttonPanelInner,
+                  {
+                    backgroundColor: theme.colors.surface,
+                  }
+                ]}>
+                  {/* Main Recording Button */}
+                  <TouchableOpacity
+                    style={styles.mainButtonContainer}
+                    onPress={recorderState.isRecording ? stopRecording : startRecording}
+                    disabled={!permissionGranted}
+                    activeOpacity={0.85}
                   >
-                    {recorderState.isRecording ? (
-                      <MicOff size={64} color="white" strokeWidth={2.5} />
-                    ) : (
-                      <Mic size={64} color="white" strokeWidth={2.5} />
-                    )}
-                  </Animated.View>
-                </TouchableOpacity>
+                    <Animated.View
+                      style={[
+                        styles.mainRecordButton,
+                        recorderState.isRecording
+                          ? { backgroundColor: '#FF3B30' }
+                          : { backgroundColor: theme.colors.primary },
+                        !permissionGranted && styles.heroButtonDisabled,
+                        {
+                          transform: [
+                            { scale: recorderState.isRecording ? pulseAnim : getHeroButtonScale },
+                          ],
+                          opacity: recorderState.isRecording ? 1 : getHeroButtonOpacity,
+                        },
+                      ]}
+                    >
+                      {recorderState.isRecording ? (
+                        <View style={styles.stopIcon} />
+                      ) : (
+                        <Mic size={48} color="white" strokeWidth={2.5} />
+                      )}
+                    </Animated.View>
+                  </TouchableOpacity>
 
-                <Text style={[styles.heroInstruction, { color: theme.colors.textSecondary }]}>
-                  {recorderState.isRecording ? 'Tap to finish' : 'Tap to start'}
-                </Text>
+                  <Text style={[styles.buttonInstruction, { color: theme.colors.textSecondary }]}>
+                    {recorderState.isRecording ? 'Tap to finish recording' : 'Tap to start recording'}
+                  </Text>
+                </View>
               </View>
             </View>
           )}
@@ -608,8 +781,8 @@ Parse this into actionable tasks following the format specified.`;
               <Text style={[styles.statusTitle, { color: theme.colors.text }]}>
                 Creating Tasks...
               </Text>
-              <Text style={[styles.statusSubtitle, { color: theme.colors.textSecondary }]}>
-                {processingMessage}
+              <Text style={[styles.typewriterText, { color: theme.colors.textSecondary }]}>
+                {typewriterText}
               </Text>
             </View>
           )}
@@ -619,7 +792,13 @@ Parse this into actionable tasks following the format specified.`;
             <View style={styles.tasksSection}>
               <View style={styles.tasksList}>
                 {parsedTasks.map((task, index) => (
-                  <View key={index} style={styles.taskItemContainer}>
+                  <View
+                    key={index}
+                    style={[
+                      styles.taskItemContainer,
+                      { backgroundColor: theme.colors.surface }
+                    ]}
+                  >
                     <View style={styles.taskItemWrapper}>
                       <View style={styles.taskItemContent}>
                         <TodoListItem
@@ -632,9 +811,7 @@ Parse this into actionable tasks following the format specified.`;
                           style={styles.deleteTaskButton}
                           onPress={() => deleteTask(index)}
                         >
-                          <View style={[styles.deleteIconContainer, { backgroundColor: '#FF3B30' }]}>
-                            <Trash2 size={18} color="white" strokeWidth={2.5} />
-                          </View>
+                          <Trash2 size={16} color={theme.colors.textSecondary} strokeWidth={2} />
                         </TouchableOpacity>
                       )}
                     </View>
@@ -687,20 +864,76 @@ Parse this into actionable tasks following the format specified.`;
         onRequestClose={handleSuccessModalClose}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { backgroundColor: theme.colors.background }]}>
-            <Text style={styles.modalEmoji}>🎉</Text>
-            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
-              Success!
-            </Text>
-            <Text style={[styles.modalMessage, { color: theme.colors.textSecondary }]}>
-              {savedTasksCount} task{savedTasksCount > 1 ? 's have' : ' has'} been added to your todo list!
-            </Text>
-            <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: theme.colors.primary }]}
-              onPress={handleSuccessModalClose}
-            >
-              <Text style={styles.modalButtonText}>OK</Text>
-            </TouchableOpacity>
+          <View style={[
+            styles.modalContainer,
+            styles.modalEmbossed,
+            {
+              backgroundColor: theme.colors.background,
+              shadowColor: isDark ? '#FFFFFF' : '#000000',
+            }
+          ]}>
+            <View style={[
+              styles.modalContent,
+              {
+                backgroundColor: theme.colors.surface,
+              }
+            ]}>
+              <Text style={styles.modalEmoji}>🎉</Text>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                Success!
+              </Text>
+              <Text style={[styles.modalMessage, { color: theme.colors.textSecondary }]}>
+                {savedTasksCount} task{savedTasksCount > 1 ? 's have' : ' has'} been added to your todo list!
+              </Text>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: theme.colors.primary }]}
+                onPress={handleSuccessModalClose}
+              >
+                <Text style={styles.modalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal
+        visible={showErrorModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleErrorModalClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalContainer,
+            styles.modalEmbossed,
+            {
+              backgroundColor: theme.colors.background,
+              shadowColor: isDark ? '#FFFFFF' : '#000000',
+            }
+          ]}>
+            <View style={[
+              styles.modalContent,
+              {
+                backgroundColor: theme.colors.surface,
+              }
+            ]}>
+              <View style={styles.errorHeader}>
+                <Text style={styles.errorEmoji}>⚠️</Text>
+                <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
+                  {errorMessage.title}
+                </Text>
+              </View>
+              <Text style={[styles.modalMessage, { color: theme.colors.textSecondary }]}>
+                {errorMessage.description}
+              </Text>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: theme.colors.primary }]}
+                onPress={handleErrorModalClose}
+              >
+                <Text style={styles.modalButtonText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -728,7 +961,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerRight: {
-    width: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 12,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.3,
   },
   progressBarContainer: {
     height: 3,
@@ -767,6 +1008,73 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     width: '100%',
   },
+  // Recording Timer Panel
+  timerPanel: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    width: '100%',
+  },
+  timerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  recDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recDotInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FF3B30',
+  },
+  timerText: {
+    fontSize: 42,
+    fontWeight: '300',
+    color: '#FFFFFF',
+    letterSpacing: -1,
+  },
+  timerMinutes: {
+    fontSize: 28,
+    fontWeight: '400',
+  },
+  timerSeconds: {
+    fontSize: 28,
+    fontWeight: '400',
+  },
+  // Waveform
+  waveformContainer: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    width: '100%',
+  },
+  waveformBars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 80,
+    marginBottom: 8,
+  },
+  waveformBar: {
+    width: 3,
+    borderRadius: 1.5,
+  },
+  waveformTimeAxis: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  waveformTimeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
   heroTextContainer: {
     alignItems: 'flex-start',
     marginBottom: 40,
@@ -791,35 +1099,55 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
     paddingLeft: 0,
   },
-  heroButtonWrapper: {
+  // Embossed Button Panel
+  buttonPanel: {
+    borderRadius: 24,
+    padding: 6,
     width: '100%',
-    alignItems: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  heroButtonContainer: {
+  buttonPanelInner: {
+    borderRadius: 20,
+    padding: 32,
     alignItems: 'center',
-    marginVertical: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
-  heroButton: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+  mainButtonContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  mainRecordButton: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
   },
-  heroButtonDisabled: {
-    opacity: 0.4,
+  stopIcon: {
+    width: 32,
+    height: 32,
+    backgroundColor: 'white',
+    borderRadius: 6,
   },
-  heroInstruction: {
-    fontSize: 17,
+  buttonInstruction: {
+    fontSize: 15,
     fontWeight: '500',
-    marginTop: 16,
     letterSpacing: -0.2,
     textAlign: 'center',
+  },
+  heroButtonDisabled: {
+    opacity: 0.4,
   },
   statusCard: {
     padding: 60,
@@ -837,6 +1165,14 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.2,
   },
+  typewriterText: {
+    fontSize: 17,
+    fontWeight: '400',
+    letterSpacing: -0.2,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 24,
+  },
   tasksSection: {
     gap: 16,
   },
@@ -845,32 +1181,26 @@ const styles = StyleSheet.create({
   },
   taskItemContainer: {
     position: 'relative',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   taskItemWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    paddingRight: 12,
   },
   taskItemContent: {
     flex: 1,
+    marginLeft: -12,
   },
   deleteTaskButton: {
-    padding: 4,
-  },
-  deleteIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    padding: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#FF3B30',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  deleteIcon: {
-    fontSize: 18,
   },
   checkOverlay: {
     position: 'absolute',
@@ -936,16 +1266,25 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContainer: {
+    borderRadius: 24,
+    minWidth: 280,
+    maxWidth: '90%',
+  },
+  modalEmbossed: {
+    padding: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalContent: {
     borderRadius: 20,
     padding: 32,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
-    minWidth: 280,
-    maxWidth: '90%',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
   },
   modalEmoji: {
     fontSize: 64,
@@ -976,5 +1315,20 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     letterSpacing: -0.3,
+  },
+  errorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    gap: 12,
+  },
+  errorEmoji: {
+    fontSize: 28,
+  },
+  errorTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
 });

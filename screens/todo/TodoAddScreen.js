@@ -71,12 +71,17 @@ export default function TodoAddScreen({ navigation }) {
     setLoading(true);
 
     try {
+      // Ensure at least one date is set - if no dates are provided, default to dueDate as today
+      // This ensures notifications can be scheduled properly
+      const finalDueDate = dueDate || startDate || new Date();
+      const finalStartDate = startDate;
+
       const todoData = {
         title: title.trim(),
         description: description.trim() || null,
         priority,
-        due_date: dueDate ? dueDate.toISOString() : null,
-        start_date: startDate ? startDate.toISOString() : null,
+        due_date: finalDueDate.toISOString(),
+        start_date: finalStartDate ? finalStartDate.toISOString() : null,
         all_day: allDay,
         duration_minutes: allDay ? null : durationMinutes,
         location: location.trim() || null,

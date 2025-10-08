@@ -44,13 +44,17 @@ export const todosService = {
   // Add a new todo
   async addTodo(todoData) {
     try {
+      // If no due_date is provided but start_date exists, use start_date as due_date
+      // This ensures notifications can be scheduled properly
+      const due_date = todoData.due_date || todoData.start_date || null;
+
       const { data, error } = await supabase
         .from('todos')
         .insert([{
           title: todoData.title,
           description: todoData.description || null,
           priority: todoData.priority || 0,
-          due_date: todoData.due_date || null,
+          due_date: due_date,
           start_date: todoData.start_date || null,
           start_time: todoData.start_time || null,
           end_time: todoData.end_time || null,
@@ -70,8 +74,8 @@ export const todosService = {
 
       if (error) throw error;
 
-      // Schedule notifications for the new todo if it has alerts and due date
-      if (data && data.alert_minutes && data.due_date) {
+      // Schedule notifications for the new todo if it has alerts and due date (or start date)
+      if (data && data.alert_minutes && (data.due_date || data.start_date)) {
         try {
           await notificationService.scheduleNotificationForTodo(data);
           console.log(`Scheduled notifications for todo: ${data.title}`);

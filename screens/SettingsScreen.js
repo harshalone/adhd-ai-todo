@@ -263,18 +263,7 @@ export default function SettingsScreen({ navigation }) {
               <Text style={[styles.settingLabel, { color: theme.colors.text }]}>Daily Schedule</Text>
             </View>
             <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.settingItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={navigateToNewAiTodo}
-          >
-            <View style={styles.settingLeft}>
-              <Sparkles size={20} color={theme.colors.text} />
-              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>AI Todo</Text>
-            </View>
-            <ChevronRight size={33} color={theme.colors.text} style={styles.chevron} />
-          </TouchableOpacity>
+          </TouchableOpacity> 
 
           <TouchableOpacity
             style={[styles.settingItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}

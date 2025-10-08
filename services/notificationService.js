@@ -111,8 +111,10 @@ export const notificationService = {
       for (const minutes of todo.alert_minutes) {
         const notificationTime = new Date(dueDateTime.getTime() - (minutes * 60 * 1000));
 
-        // Only schedule if notification time is in the future
-        if (notificationTime > now) {
+        // Only schedule if notification time is at least 1 minute in the future
+        // This prevents notifications from firing immediately when creating a todo
+        const oneMinuteFromNow = new Date(now.getTime() + (60 * 1000));
+        if (notificationTime > oneMinuteFromNow) {
           // Extract date and time components for clarity
           const year = notificationTime.getFullYear();
           const month = notificationTime.getMonth(); // 0-indexed
