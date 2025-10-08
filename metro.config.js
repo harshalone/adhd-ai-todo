@@ -7,7 +7,8 @@ const config = getDefaultConfig(__dirname);
 // Add Node.js module resolution for packages that require them
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   // Resolve Node.js built-in modules as empty objects for React Native
-  if (moduleName === 'path' || moduleName === 'fs') {
+  const nodeModules = ['path', 'fs', 'os', 'crypto', 'stream', 'http', 'https', 'zlib', 'util'];
+  if (nodeModules.includes(moduleName)) {
     return {
       type: 'empty',
     };
