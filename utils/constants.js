@@ -16,8 +16,8 @@ export const APP_CURRENT_VERSION = '2.0.1';
 // Default fallback values (used until database values are loaded)
 export const DEFAULT_CONSTANTS = {
   CONTACT_US_API_URL: 'https://www.mobilecrm.org/api/email/esend',
-  APP_STORE_ID: '6741738531',
-  APP_STORE_URL: 'https://apps.apple.com/gb/app/stocard/id6741738531',
+  APP_STORE_ID: '6752913792',
+  APP_STORE_URL: 'https://apps.apple.com/gb/app/ai-planner/id6752913792',
   TERMS_OF_SERVICE_URL: 'https://www.mobilecrm.org/p/terms',
   PRIVACY_POLICY_URL: 'https://www.mobilecrm.org/p/privacy',
   SERVER_URL: 'https://www.mobilecrm.org',
