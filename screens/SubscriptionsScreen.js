@@ -180,7 +180,9 @@ export default function SubscriptionsScreen({ navigation }) {
                 // Generate simple title based on product identifier
                 const productId = entitlement.productIdentifier.toLowerCase();
                 let simpleTitle = 'Pro';
-                if (productId.includes('year') || productId.includes('annual')) {
+                if (productId.includes('lifetime')) {
+                  simpleTitle = 'Lifetime Pro';
+                } else if (productId.includes('year') || productId.includes('annual')) {
                   simpleTitle = 'Pro Yearly';
                 } else if (productId.includes('month')) {
                   simpleTitle = 'Pro Monthly';
@@ -231,7 +233,9 @@ export default function SubscriptionsScreen({ navigation }) {
             {availablePackages.map((pkg, index) => {
               // Generate simple title based on package type
               let simpleTitle = 'Pro';
-              if (pkg.packageType === 'ANNUAL' || pkg.identifier.toLowerCase().includes('year')) {
+              if (pkg.packageType === 'LIFETIME' || pkg.identifier.toLowerCase().includes('lifetime')) {
+                simpleTitle = 'Lifetime Pro';
+              } else if (pkg.packageType === 'ANNUAL' || pkg.identifier.toLowerCase().includes('year')) {
                 simpleTitle = 'Pro Yearly';
               } else if (pkg.packageType === 'MONTHLY' || pkg.identifier.toLowerCase().includes('month')) {
                 simpleTitle = 'Pro Monthly';

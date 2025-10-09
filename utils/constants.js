@@ -11,7 +11,7 @@ export const REVENUECAT_PUBLIC_API_KEY = ''; // Fallback public API key
 
 // Required Constants for app (Static - Required for database queries)
 export const APP_DB_ID = 'LIST123456';
-export const APP_CURRENT_VERSION = '2.0.1';
+export const APP_CURRENT_VERSION = '2.1.1';
 
 // Default fallback values (used until database values are loaded)
 export const DEFAULT_CONSTANTS = {

@@ -15,7 +15,6 @@ export default function OBSubscriptionsScreen({ navigation }) {
   const {
     offerings,
     loading,
-    initialized,
     refreshSubscription,
     refreshOfferings,
   } = useSubscriptionContext();
@@ -160,16 +159,20 @@ export default function OBSubscriptionsScreen({ navigation }) {
 
         <View style={styles.plansContainer}>
           {availablePackages.length > 0 ? (
-            availablePackages.map((pkg, index) => {
+            availablePackages.map((pkg) => {
               // Generate simple title based on package type
               let simpleTitle = 'Pro';
               let billingPeriod = '';
               let isPopular = false;
 
-              if (pkg.packageType === 'ANNUAL' || pkg.identifier.toLowerCase().includes('year')) {
+              if (pkg.packageType === 'LIFETIME' || pkg.identifier.toLowerCase().includes('lifetime')) {
+                simpleTitle = 'Lifetime Pro';
+                billingPeriod = '';
+                isPopular = true; // Lifetime is the best value
+              } else if (pkg.packageType === 'ANNUAL' || pkg.identifier.toLowerCase().includes('year')) {
                 simpleTitle = 'Annual';
                 billingPeriod = '/year';
-                isPopular = true; // Annual is usually the best value
+                isPopular = false;
               } else if (pkg.packageType === 'MONTHLY' || pkg.identifier.toLowerCase().includes('month')) {
                 simpleTitle = 'Monthly';
                 billingPeriod = '/month';
@@ -269,8 +272,19 @@ export default function OBSubscriptionsScreen({ navigation }) {
           <View style={styles.pricePreview}>
             <Text style={[styles.pricePreviewText, { color: theme.colors.textSecondary }]}>
               {availablePackages.find(p => p.identifier === selectedPackageId)?.product.priceString || ''}
-              {availablePackages.find(p => p.identifier === selectedPackageId)?.packageType === 'ANNUAL' ? '/year' :
-               availablePackages.find(p => p.identifier === selectedPackageId)?.packageType === 'MONTHLY' ? '/month' : '/week'}
+              {(() => {
+                const selectedPkg = availablePackages.find(p => p.identifier === selectedPackageId);
+                if (selectedPkg?.packageType === 'LIFETIME' || selectedPkg?.identifier.toLowerCase().includes('lifetime')) {
+                  return '';
+                } else if (selectedPkg?.packageType === 'ANNUAL') {
+                  return '/year';
+                } else if (selectedPkg?.packageType === 'MONTHLY') {
+                  return '/month';
+                } else if (selectedPkg?.packageType === 'WEEKLY') {
+                  return '/week';
+                }
+                return '';
+              })()}
             </Text>
           </View>
         )}

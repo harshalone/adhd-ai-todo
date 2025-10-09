@@ -13,6 +13,10 @@ eas submit --platform ios
 # run expo app on device connected with machine via cable 
 npx expo run:ios --device
 
+# To open project in xcode
+xed ios
+
+
 # App review information
 iostestingaccount@proton.me
 @iOSLondon007@

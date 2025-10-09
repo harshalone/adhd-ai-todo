@@ -329,7 +329,7 @@ export default function NewAiTodoScreen({ navigation }) {
     // Start typewriter animation
     setTypewriterText('');
     let currentIndex = 0;
-    const typewriterInterval = setInterval(() => {
+    let typewriterInterval = setInterval(() => {
       if (currentIndex <= text.length) {
         setTypewriterText(text.substring(0, currentIndex));
         currentIndex++;
@@ -429,6 +429,10 @@ Parse this into actionable tasks following the format specified.`;
       const parsedResponse = JSON.parse(jsonMatch[0]);
 
       if (parsedResponse.tasks && parsedResponse.tasks.length > 0) {
+        // Stop typewriter animation immediately when tasks are ready
+        clearInterval(typewriterInterval);
+        setTypewriterText(text); // Show full text immediately
+
         // Add light haptic for each task created
         for (let i = 0; i < parsedResponse.tasks.length; i++) {
           await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -774,8 +778,8 @@ Parse this into actionable tasks following the format specified.`;
             </View>
           )}
 
-          {/* Processing State */}
-          {isProcessing && (
+          {/* Processing State - only show when isProcessing is true AND no tasks yet */}
+          {isProcessing && parsedTasks.length === 0 && (
             <View style={styles.statusCard}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
               <Text style={[styles.statusTitle, { color: theme.colors.text }]}>
@@ -903,9 +907,9 @@ Parse this into actionable tasks following the format specified.`;
         animationType="fade"
         onRequestClose={handleErrorModalClose}
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.errorModalOverlay}>
           <View style={[
-            styles.modalContainer,
+            styles.errorModalContainer,
             styles.modalEmbossed,
             {
               backgroundColor: theme.colors.background,
@@ -918,12 +922,10 @@ Parse this into actionable tasks following the format specified.`;
                 backgroundColor: theme.colors.surface,
               }
             ]}>
-              <View style={styles.errorHeader}>
-                <Text style={styles.errorEmoji}>⚠️</Text>
-                <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
-                  {errorMessage.title}
-                </Text>
-              </View>
+              <Text style={styles.errorEmoji}>⚠️</Text>
+              <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
+                {errorMessage.title}
+              </Text>
               <Text style={[styles.modalMessage, { color: theme.colors.textSecondary }]}>
                 {errorMessage.description}
               </Text>
@@ -1265,7 +1267,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  errorModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 80,
+    padding: 20,
+  },
   modalContainer: {
+    borderRadius: 24,
+    minWidth: 280,
+    maxWidth: '90%',
+  },
+  errorModalContainer: {
     borderRadius: 24,
     minWidth: 280,
     maxWidth: '90%',
@@ -1316,19 +1331,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.3,
   },
-  errorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    gap: 12,
-  },
   errorEmoji: {
-    fontSize: 28,
+    fontSize: 48,
+    marginBottom: 12,
   },
   errorTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+    fontSize: 22,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+    marginBottom: 12,
+    textAlign: 'center',
   },
 });
