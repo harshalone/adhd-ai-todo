@@ -295,11 +295,20 @@ export default function NewAiTodoScreen({ navigation }) {
         audio: audioBuffer
       });
 
-      setTranscribedText(text);
+      // Normalize transcription: replace periods with commas for better task parsing
+      // This helps the AI parser identify separate time-task pairs
+      const normalizedText = text
+        .replace(/\.\s+/g, ', ')  // Replace ". " with ", "
+        .replace(/,\s*,/g, ',')   // Remove duplicate commas
+        .trim();
+
+      console.log('Transcribed text (original):', text);
+      console.log('Transcribed text (normalized):', normalizedText);
+      setTranscribedText(normalizedText);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      if (autoProcess && text) {
-        setTimeout(() => processWithAI(text), 500);
+      if (autoProcess && normalizedText) {
+        setTimeout(() => processWithAI(normalizedText), 500);
       }
 
     } catch (error) {
@@ -353,15 +362,81 @@ CORE CAPABILITIES:
 - Handle multiple tasks in a single input with sophisticated disambiguation
 - Recognize implicit scheduling patterns and user intent
 - Extract timing, duration, and reminder preferences from context
+- Understand conversational flow where times may be stated before or after tasks
 
-PARSING INTELLIGENCE:
-1. DATE & TIME EXTRACTION:
+CRITICAL PARSING RULES FOR CONVERSATIONAL INPUT:
+
+STEP-BY-STEP PARSING APPROACH:
+1. First, read through the ENTIRE input and identify ALL time markers (6 AM, 830, 9, 1130, 12, 2 PM, etc.)
+2. Then, read through again and identify ALL tasks/activities mentioned
+3. Match each task to its associated time by analyzing the exact position and sentence structure
+4. Build the task list by going through the text sequentially, ensuring every time marker is used
+
+TIME-TASK MATCHING RULES:
+1. IDENTIFY TIME MARKERS (recognize ALL formats):
+   NUMERIC formats:
+   - "6 AM", "8:30", "9 AM", "1130", "12", "2 PM"
+   - Bare numbers: 830, 9, 1130, 12 are times, not quantities
+
+   WORD formats (transcription often converts numbers to words):
+   - "six AM", "six", "six o'clock" = 6:00
+   - "eight thirty", "eight 30" = 8:30
+   - "nine", "nine AM", "nine o'clock" = 9:00
+   - "eleven thirty", "eleven 30", "1130" = 11:30
+   - "twelve", "twelve noon", "noon" = 12:00
+   - "two PM", "two", "two o'clock" = 14:00 (if afternoon context)
+
+   MIXED formats:
+   - "6 AM" or "six AM" = same time
+   - "830" or "eight thirty" or "eight 30" = same time
+   - Be flexible with spacing and formatting
+
+   - Count ALL time markers (numeric OR word-based) - you must create a task for each one
+
+2. MATCH TIME TO TASK:
+   - Read each sentence/clause carefully
+   - A time and task in the SAME sentence/clause belong together
+
+   Example 1 (numeric): "running at 6 AM, then 8:30, I want breakfast, 9 AM call with Paul, 1130 lunch"
+     Parse as:
+     * "running at 6 AM" → Running = 6:00 AM
+     * "then 8:30, I want breakfast" → Breakfast = 8:30 AM
+     * "9 AM call with Paul" → Call with Paul = 9:00 AM
+     * "1130 lunch" → Lunch = 11:30 AM
+
+   Example 2 (word-based): "running at six AM, then eight thirty, I want breakfast, nine AM call with Paul"
+     Parse as:
+     * "running at six AM" → Running = 6:00 AM
+     * "then eight thirty, I want breakfast" → Breakfast = 8:30 AM
+     * "nine AM call with Paul" → Call with Paul = 9:00 AM
+
+   - If you see time (word or number) followed by task, that's the time for that task
+   - If you see task followed by time (word or number), that time applies to that task
+   - Commas and periods separate different time-task pairs
+   - Words like "six", "nine", "eleven" in context with tasks are TIMES not quantities
+
+3. COMMON PATTERNS:
+   - "at X, do Y" = task Y at time X
+   - "do Y at X" = task Y at time X
+   - "X, do Y" = task Y at time X
+   - "do Y, X" = task Y at time X
+   - "do Y. X do Z" = Z at time X (Y inferred earlier)
+   - Position matters: match time with the NEAREST task description
+
+4. VALIDATION:
+   - Count time markers in input
+   - Count tasks in output
+   - These should match (or tasks slightly more if some have inferred times)
+   - DO NOT skip any explicitly mentioned times
+
+4. DATE & TIME EXTRACTION:
    - Today, tomorrow, next week, this weekend, etc.
    - Specific dates: "March 15th", "next Monday", "in 2 weeks"
    - Time references: "morning", "afternoon", "evening", "9 AM", "after lunch"
    - Relative timing: "before the meeting", "after work", "by end of day"
+   - Bare numbers followed by context: "830" or "8 30" likely means 8:30
 
-2. SMART DEFAULTS & CONTEXT AWARENESS:
+5. SMART DEFAULTS & CONTEXT AWARENESS:
    - Use current time context to make intelligent scheduling decisions
    - If no specific time given, use appropriate defaults relative to current time
    - Business tasks default to business hours
@@ -370,13 +445,13 @@ PARSING INTELLIGENCE:
    - "Before meal" timing depends on current time of day
    - Current time: ${currentTime.local}
 
-3. REMINDER LOGIC:
+6. REMINDER LOGIC:
    - Default reminders: 15 minutes for meetings, 60 minutes for appointments
    - "Don't forget" = 30 minutes reminder
    - "Urgent" or "Important" = 60 minutes reminder
    - "ASAP" = 15 minutes reminder
 
-4. PRIORITY DETECTION:
+7. PRIORITY DETECTION:
    - High priority (2): "urgent", "ASAP", "critical", "important", "priority", "emergency", "must do", "can't miss"
    - Medium priority (1): "should", "need to", "important", "reminder", "don't forget"
    - Low priority (0): "maybe", "when possible", "if time", "eventually", "sometime", default for routine tasks
@@ -403,6 +478,7 @@ CRITICAL RULES:
 - Times must be in 24-hour format (HH:MM)
 - Dates must be in YYYY-MM-DD format
 - Prioritize user intent over literal interpretation
+- Carefully match each task with its correct time - this is CRITICAL
 - If ambiguous, make reasonable assumptions based on context
 - Minimum viable tasks - every task must be actionable
 - Maximum 10 tasks per response to maintain quality
@@ -413,6 +489,12 @@ CRITICAL RULES:
       const userPrompt = `Current time context: ${JSON.stringify(currentTime)}
 
 User said: "${text}"
+
+IMPORTANT: Analyze the input step by step:
+1. List all time markers found: [identify each time mentioned]
+2. List all tasks/activities found: [identify each task]
+3. Match each task to its time based on sentence structure
+4. Ensure EVERY time marker has a corresponding task
 
 Parse this into actionable tasks following the format specified.`;
 
@@ -427,6 +509,7 @@ Parse this into actionable tasks following the format specified.`;
       }
 
       const parsedResponse = JSON.parse(jsonMatch[0]);
+      console.log('Parsed tasks JSON:', JSON.stringify(parsedResponse, null, 2));
 
       if (parsedResponse.tasks && parsedResponse.tasks.length > 0) {
         // Stop typewriter animation immediately when tasks are ready
@@ -780,12 +863,14 @@ Parse this into actionable tasks following the format specified.`;
 
           {/* Processing State - only show when isProcessing is true AND no tasks yet */}
           {isProcessing && parsedTasks.length === 0 && (
-            <View style={styles.statusCard}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-              <Text style={[styles.statusTitle, { color: theme.colors.text }]}>
-                Creating Tasks...
-              </Text>
-              <Text style={[styles.typewriterText, { color: theme.colors.textSecondary }]}>
+            <View style={styles.processingContainer}>
+              <View style={styles.processingHeader}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={[styles.processingTitle, { color: theme.colors.text }]}>
+                  Creating Tasks...
+                </Text>
+              </View>
+              <Text style={[styles.processingText, { color: theme.colors.textSecondary }]}>
                 {typewriterText}
               </Text>
             </View>
@@ -1174,6 +1259,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
     lineHeight: 24,
+  },
+  processingContainer: {
+    width: '100%',
+    paddingHorizontal: 4,
+    paddingVertical: 20,
+    gap: 16,
+  },
+  processingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  processingTitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+  },
+  processingText: {
+    fontSize: 17,
+    fontWeight: '400',
+    letterSpacing: -0.2,
+    lineHeight: 24,
+    textAlign: 'left',
   },
   tasksSection: {
     gap: 16,
