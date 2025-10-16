@@ -105,20 +105,20 @@ export default function DailyScheduleScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <BackButton onPress={() => navigation.goBack()} />
-            <Text style={[styles.title, { color: theme.colors.text }]}>Daily Schedule</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-            onPress={handleAddPress}
-          >
-            <Plus size={24} color="#fff" />
-          </TouchableOpacity>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <Text style={[styles.title, { color: theme.colors.text }]}>Daily Schedule</Text>
         </View>
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
+          onPress={handleAddPress}
+        >
+          <Plus size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
+      <View style={styles.content}>
         <FlashList
           data={sortedTasks}
           renderItem={renderScheduleItem}
@@ -142,16 +142,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 0,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    paddingLeft: 0,
+    paddingRight: 16,
+    paddingBottom: 16,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -161,7 +158,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    marginLeft: 8,
+    marginLeft: 0,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
   },
   addButton: {
     width: 44,

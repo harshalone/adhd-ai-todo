@@ -173,8 +173,13 @@ export default function PayWallScreen({ navigation, route }) {
               // Generate simple title based on package type
               let simpleTitle = 'Pro';
               let billingPeriod = '';
+              let isPopular = false;
 
-              if (pkg.packageType === 'ANNUAL' || pkg.identifier.toLowerCase().includes('year')) {
+              if (pkg.packageType === 'LIFETIME' || pkg.identifier.toLowerCase().includes('lifetime')) {
+                simpleTitle = 'Lifetime Pro';
+                billingPeriod = 'Pay once, yours forever';
+                isPopular = true; // Lifetime is the best value
+              } else if (pkg.packageType === 'ANNUAL' || pkg.identifier.toLowerCase().includes('year')) {
                 simpleTitle = 'Pro Yearly';
                 billingPeriod = 'per year';
               } else if (pkg.packageType === 'MONTHLY' || pkg.identifier.toLowerCase().includes('month')) {
@@ -200,6 +205,12 @@ export default function PayWallScreen({ navigation, route }) {
                   onPress={() => setSelectedPackageId(pkg.identifier)}
                   activeOpacity={0.7}
                 >
+                  {isPopular && (
+                    <View style={[styles.popularBadge, { backgroundColor: theme.colors.primary }]}>
+                      <Sparkles size={12} color="#fff" />
+                      <Text style={styles.popularText}>BEST VALUE</Text>
+                    </View>
+                  )}
                   <View style={styles.packageContent}>
                     <View style={styles.packageLeft}>
                       <Text style={[styles.packageTitle, { color: theme.colors.text }]}>
@@ -540,5 +551,30 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  popularBadge: {
+    position: 'absolute',
+    top: -10,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  popularText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
 });
