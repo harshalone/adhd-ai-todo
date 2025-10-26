@@ -111,22 +111,16 @@ export const notificationService = {
       for (const minutes of todo.alert_minutes) {
         const notificationTime = new Date(dueDateTime.getTime() - (minutes * 60 * 1000));
 
-        // Only schedule if notification time is at least 1 minute in the future
-        // This prevents notifications from firing immediately when creating a todo
-        const oneMinuteFromNow = new Date(now.getTime() + (60 * 1000));
-        if (notificationTime > oneMinuteFromNow) {
-          // Extract date and time components for clarity
-          const year = notificationTime.getFullYear();
-          const month = notificationTime.getMonth(); // 0-indexed
-          const day = notificationTime.getDate();
-          const hour = notificationTime.getHours();
-          const minute = notificationTime.getMinutes();
-          const second = notificationTime.getSeconds();
+        // Calculate seconds until notification should fire
+        const secondsUntilNotification = Math.floor((notificationTime.getTime() - now.getTime()) / 1000);
 
-          console.log(`📅 Scheduling notification for: ${year}-${month + 1}-${day} at ${hour}:${minute}:${second}`);
+        // Only schedule if notification time is at least 60 seconds in the future (iOS requirement)
+        // This prevents notifications from firing immediately when creating a todo
+        if (secondsUntilNotification >= 60) {
+          console.log(`📅 Scheduling notification for: ${notificationTime.toLocaleString()} (in ${secondsUntilNotification} seconds)`);
 
           const notificationId = await Notifications.scheduleNotificationAsync({
-            identifier: `todo-${todo.uid || todo.id}-${minutes}min`,
+            identifier: `todo-${todo.uid || todo.id}-${minutes}min-${Date.now()}`,
             content: {
               title: this.getNotificationTitle(todo, minutes),
               body: this.getNotificationBody(todo, minutes),
@@ -137,8 +131,7 @@ export const notificationService = {
                 type: 'todo_reminder',
                 scheduledAt: new Date().toISOString(),
                 dueDateTime: dueDateTime.toISOString(),
-                scheduledDate: `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-                scheduledTime: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`,
+                notificationTime: notificationTime.toISOString(),
               },
               sound: true,
               priority: Notifications.AndroidNotificationPriority.HIGH,
@@ -153,21 +146,17 @@ export const notificationService = {
               },
             },
             trigger: {
-              // Using calendar-based trigger for more precise scheduling
-              year,
-              month: month + 1, // Expo uses 1-indexed months (1-12)
-              day,
-              hour,
-              minute,
-              second,
+              // Using seconds-based trigger for reliable cross-platform scheduling
+              // This prevents iOS from firing notifications immediately when calendar times are misinterpreted
+              seconds: secondsUntilNotification,
               channelId: 'default',
             },
           });
 
           notificationIds.push(notificationId);
-          console.log(`✅ Scheduled notification ${notificationId} for todo "${todo.title}" (uid: ${todo.uid || todo.id}) at ${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} (${minutes} min before due time)`);
+          console.log(`✅ Scheduled notification ${notificationId} for todo "${todo.title}" (uid: ${todo.uid || todo.id}) - will fire in ${secondsUntilNotification} seconds (${Math.floor(secondsUntilNotification / 60)} minutes) at ${notificationTime.toLocaleString()}`);
         } else {
-          console.log(`⏭️ Skipped notification for todo "${todo.title}" - ${minutes} min alert time (${notificationTime.toLocaleString()}) is in the past`);
+          console.log(`⏭️ Skipped notification for todo "${todo.title}" - ${minutes} min alert time (${notificationTime.toLocaleString()}) is too soon or in the past (${secondsUntilNotification} seconds)`);
         }
       }
 

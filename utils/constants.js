@@ -10,8 +10,8 @@ export const SUPABASE_PROJECT_URL = 'https://wggiqxnxuyienczdpmlv.supabase.co';
 export const REVENUECAT_PUBLIC_API_KEY = ''; // Fallback public API key
 
 // Required Constants for app (Static - Required for database queries)
-export const APP_DB_ID = 'LIST123456';
-export const APP_CURRENT_VERSION = '2.2.1';
+export const APP_DB_ID = 'AIPLANNER123456';
+export const APP_CURRENT_VERSION = '2.2.3';
 
 // Default fallback values (used until database values are loaded)
 export const DEFAULT_CONSTANTS = {
